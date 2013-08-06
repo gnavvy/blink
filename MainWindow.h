@@ -28,7 +28,6 @@ private:
     QDeclarativeView *view;
     QTimer *timer;
 
-
     void flash();
     void blur();
 
