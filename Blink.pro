@@ -28,15 +28,12 @@ FORMS +=
 
 HEADERS += \
     MainWindow.h \
-    EyeTracker.h \
-    constants.h \
-    helpers.h
+    EyeTracker.h
 
 SOURCES += \
     main.cpp \
     MainWindow.cpp \
-    EyeTracker.cpp \
-    helpers.cpp
+    EyeTracker.cpp
 
 OTHER_FILES += \
     ui.qml

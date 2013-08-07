@@ -3,39 +3,33 @@
 EyeTracker::EyeTracker() {}
 
 void EyeTracker::Start() {
-    if (!faceCascade.load(faceCascadePath)) {
+    if (!faceCascade.load(kFaceCascadePath)) {
         std::cerr << "cannot load face cascade files" << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    if (!leftEyeCascade.load(leftEyeCascadePath) || !rightEyeCascase.load(rightEyeCascadePath)) {
+    if (!eyesCascade.load(kEyesCascadePath)) {
         std::cerr << "cannot load eyes cascade files" << std::endl;
         exit(EXIT_FAILURE);
     }
 
     cv::namedWindow(kWindowTitle,CV_WINDOW_NORMAL);
-    cv::moveWindow(kWindowTitle, 400, 100);
+    cv::moveWindow(kWindowTitle, 640, 100);
     cv::namedWindow("Right Eye",CV_WINDOW_NORMAL);
-    cv::moveWindow("Right Eye", 10, 600);
+    cv::moveWindow("Right Eye", 480, 600);
     cv::namedWindow("Left Eye",CV_WINDOW_NORMAL);
-    cv::moveWindow("Left Eye", 10, 800);
+    cv::moveWindow("Left Eye", 480, 800);
 
     CvCapture *capture = cvCaptureFromCAM(-1);
     cv::Mat frame;
     if (capture) {
         while (true) {
             frame = cvQueryFrame(capture);
-            if (frame.empty()) {
-                std::cerr << "no captured frame." << std::endl; break;
-            }
-
+            if (frame.empty()) { std::cerr << "no captured frame." << std::endl; break; }
             cv::flip(frame, frame, 1);  // mirror
             detectAndDisplay(frame);
-
             cv::imshow(kWindowTitle, frame);
-            if (static_cast<char>(cv::waitKey(10)) == 'c') {
-                break;
-            }
+            if (static_cast<char>(cv::waitKey(10)) == 'c') { break; }
         }
     }
 }
@@ -43,40 +37,45 @@ void EyeTracker::Start() {
 void EyeTracker::detectAndDisplay(cv::Mat& frame) {
     std::vector<cv::Rect> faces;
     cv::cvtColor(frame, frame, CV_BGR2GRAY);
-    cv::equalizeHist(frame, frame);
 
     // detect faces
-    faceCascade.detectMultiScale(frame, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, cv::Size(200, 200));
+    faceCascade.detectMultiScale(frame, faces, 1.1, 2, CV_HAAR_FIND_BIGGEST_OBJECT, cv::Size(kMinFace, kMinFace));
+    if (faces.empty()) { return; }
 
-    for (unsigned int i = 0; i < faces.size(); i++) {
-        cv::Rect faceRegion = faces[i];
-        std::vector<cv::Rect> eyesRegion = estimateEyesRegion(faceRegion);
+    cv::Rect faceRegion = faces[0];
+    cv::Mat faceROI = frame(faceRegion);
+    cv::rectangle(frame, faceRegion, 1234);
 
-        cv::Mat faceROI = frame(faceRegion);
-//        cv::Mat eyesROI = faceROI(eyesRegion);
-
-        if (kUseCascade) {
-            std::vector<cv::Rect> leftEyes, rightEyes;
-            leftEyeCascade.detectMultiScale(faceROI, leftEyes, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, cv::Size(50, 50));
-            rightEyeCascase.detectMultiScale(faceROI, rightEyes, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, cv::Size(50, 50));
-
-            for (unsigned int j = 0; j < leftEyes.size(); j++) {
-                cv::Point center(faceRegion.x + leftEyes[j].x + leftEyes[j].width*0.5,
-                                 faceRegion.y + leftEyes[j].y + leftEyes[j].height*0.5);
-                int radius = cvRound((leftEyes[j].width + leftEyes[i].height)*0.25);
-                cv::circle(frame, center, radius, cv::Scalar(255, 0, 0), 2, 2, 0);
-            }
-
-            for (unsigned int j = 0; j < rightEyes.size(); j++) {
-                cv::Point center(faceRegion.x + rightEyes[j].x + rightEyes[j].width*0.5,
-                                 faceRegion.y + rightEyes[j].y + rightEyes[j].height*0.5);
-                int radius = cvRound((rightEyes[j].width + rightEyes[i].height)*0.25);
-                cv::circle(frame, center, radius, cv::Scalar(0, 0, 255), 2, 2, 0);
-            }
-        } else {    // use gradient
-            findEyes(faceROI, faceRegion);
+    if (kUseCascade) {
+        std::vector<cv::Rect> eyesRegion;
+        eyesCascade.detectMultiScale(faceROI, eyesRegion, 1.2, 2, CV_HAAR_SCALE_IMAGE, cv::Size(kMinEyes, kMinEyes));
+        for (unsigned int j = 0; j < eyesRegion.size(); j++) {
+            cv::Rect eyeRegion = eyesRegion[j];
+            cv::Mat eyeROI = faceROI(eyeRegion);
+            cv::Point center = findEyeCenter(faceROI, eyeRegion, "Left Eye");
+            cv::circle(eyeROI, center, 3, 1234);
         }
+    } else {
+        findEyes(faceROI, faceRegion);
     }
+}
+
+void EyeTracker::findEyes(cv::Mat& faceROI, cv::Rect& faceRegion) {
+    std::vector<cv::Rect> eyesRegions = estimateEyesRegion(faceRegion);
+
+    // find eye centers
+    cv::Point leftCenter = findEyeCenter(faceROI, eyesRegions[0], "Left Eye");
+    cv::Point rightCenter = findEyeCenter(faceROI, eyesRegions[1], "Right Eye");
+
+    // change eye centers to face coordinates
+    leftCenter.x += eyesRegions[0].x;
+    leftCenter.y += eyesRegions[0].y;
+    rightCenter.x += eyesRegions[1].x;
+    rightCenter.y += eyesRegions[1].y;
+
+    // draw eye centers
+    cv::circle(faceROI, leftCenter, 3, 1234);
+    cv::circle(faceROI, rightCenter, 3, 1234);
 }
 
 std::vector<cv::Rect> EyeTracker::estimateEyesRegion(const cv::Rect& faceRegion) {
@@ -97,57 +96,11 @@ std::vector<cv::Rect> EyeTracker::estimateEyesRegion(const cv::Rect& faceRegion)
     return eyesRegion;
 }
 
-void EyeTracker::findEyes(cv::Mat& faceROI, cv::Rect& faceRegion) {
-    std::vector<cv::Rect> eyesRegions = estimateEyesRegion(faceRegion);
-
-    // find eye centers
-    cv::Point leftCenter = findEyeCenter(faceROI, eyesRegions[0], "Left Eye");
-    cv::Point rightCenter = findEyeCenter(faceROI, eyesRegions[1], "Right Eye");
-
-    // find corner regions
-    cv::Rect leftLeftCornerRegion(eyesRegions[0]); {
-        leftLeftCornerRegion.width = leftCenter.x;
-        leftLeftCornerRegion.height /= 2;
-        leftLeftCornerRegion.y += leftLeftCornerRegion.height / 2;
-    }
-    cv::Rect leftRightCornerRegion(eyesRegions[0]); {
-        leftRightCornerRegion.width -= leftCenter.x;
-        leftRightCornerRegion.height /= 2;
-        leftRightCornerRegion.x += leftCenter.x;
-        leftRightCornerRegion.y += leftRightCornerRegion.height / 2;
-    }
-    cv::Rect rightLeftCornerRegion(eyesRegions[1]); {
-        rightLeftCornerRegion.width = rightCenter.x;
-        rightLeftCornerRegion.height /= 2;
-        rightLeftCornerRegion.y += rightLeftCornerRegion.height / 2;
-    }
-    cv::Rect rightRightCornerRegion(eyesRegions[1]); {
-        rightRightCornerRegion.width -= rightCenter.x;
-        rightRightCornerRegion.height /= 2;
-        rightRightCornerRegion.x += rightCenter.x;
-        rightRightCornerRegion.y += rightRightCornerRegion.height / 2;
-    }
-
-    cv::rectangle(faceROI, leftRightCornerRegion, 200, 2, 2, 0);
-    cv::rectangle(faceROI, leftLeftCornerRegion, 200, 2, 2, 0);
-    cv::rectangle(faceROI, rightLeftCornerRegion, 200, 2, 2, 0);
-    cv::rectangle(faceROI, rightRightCornerRegion, 200, 2, 2, 0);
-
-    // change eye centers to face coordinates
-    leftCenter.x += eyesRegions[0].x;
-    leftCenter.y += eyesRegions[0].y;
-    rightCenter.x += eyesRegions[1].x;
-    rightCenter.y += eyesRegions[1].y;
-
-    // draw eye centers
-    cv::circle(faceROI, leftCenter, 3, 1234);
-    cv::circle(faceROI, rightCenter, 3, 1234);
-}
-
 cv::Point EyeTracker::findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
-    cv::Mat eyeROIunscaled = face(eye);
-    cv::Mat eyeROI;
-    scaleToFastSize(eyeROIunscaled, eyeROI);
+    cv::Mat eyeROI = face(eye);
+    float scaleRatio = static_cast<float>(kFastEyeWidth) / eye.width;
+    cv::resize(eyeROI, eyeROI, cv::Size(kFastEyeWidth, scaleRatio * eye.height));
+
     // draw eye region
     cv::rectangle(face, eye, 1234);
 
@@ -172,21 +125,23 @@ cv::Point EyeTracker::findEyeCenter(cv::Mat face, cv::Rect eye, std::string debu
         }
     }
 
-    cv::imshow(debugWindow, gradientX);
+//    cv::imshow(debugWindow, gradientX);
 
     // create a blurred and inverted image for weighting
     cv::Mat weight;
-    cv::GaussianBlur( eyeROI, weight, cv::Size( kWeightBlurSize, kWeightBlurSize ), 0, 0 );       // ?
+    cv::GaussianBlur(eyeROI, weight, cv::Size(kWeightBlurSize, kWeightBlurSize), 0, 0);       // ?
     for (int y = 0; y < weight.rows; y++) {
         unsigned char *row = weight.ptr<unsigned char>(y);
         for (int x = 0; x < weight.cols; x++) {
             row[x] = 255 - row[x];
         }
     }
+
+    cv::imshow(debugWindow, weight);
     // run the algorithm
     cv::Mat outSum = cv::Mat::zeros(eyeROI.rows, eyeROI.cols, CV_64F);
-    // for each possible center
 
+    // for each possible center
     for (int y = 0; y < weight.rows; y++) {
         const unsigned char *wr = weight.ptr<unsigned char>(y);
         const double *xr = gradientX.ptr<double>(y);
@@ -195,7 +150,7 @@ cv::Point EyeTracker::findEyeCenter(cv::Mat face, cv::Rect eye, std::string debu
             double gx = xr[x];
             double gy = yr[x];
             if (gx == 0.0 && gy == 0.0) continue;
-            testPossibleCentersFormula(x, y, wr[x], gx, gy, outSum);
+            testPossibleCenters(x, y, wr[x], gx, gy, outSum);
         }
     }
 
@@ -203,27 +158,14 @@ cv::Point EyeTracker::findEyeCenter(cv::Mat face, cv::Rect eye, std::string debu
     double numGradients = weight.rows * weight.cols;
     cv::Mat out;
     outSum.convertTo(out, CV_32F, 1.0 / numGradients);
-    // find the max point?
     cv::Point maxP;
     double maxVal;
     cv::minMaxLoc(out, nullptr, &maxVal, nullptr, &maxP);
 
-    // flood fill the edges
-    if (kEnablePostProcess) {
-        cv::Mat floodClone;
-        double floodThreshold = maxVal * kPostProcessThreshold;
-        cv::threshold(out, floodClone, floodThreshold, 0.0f, cv::THRESH_TOZERO);
-        if (kPlotVectorField) {
-            cv::imwrite("eyeFrame.png", eyeROIunscaled);
-        }
-        cv::Mat mask = floodKillEdges(floodClone);
-        cv::minMaxLoc(out, nullptr, &maxVal, nullptr, &maxP, mask);
-    }
-
-    return unscalePoint(maxP, eye);
+    return cv::Point(roundf(maxP.x/scaleRatio), roundf(maxP.y)/scaleRatio);
 }
 
-void EyeTracker::testPossibleCentersFormula(int x, int y, unsigned char weight, double gx, double gy, cv::Mat &out) {
+void EyeTracker::testPossibleCenters(int x, int y, unsigned char weight, double gx, double gy, cv::Mat &out) {
     // for all possible centers
     for (int cy = 0; cy < out.rows; cy++) {
         double *Or = out.ptr<double>(cy);
@@ -236,8 +178,7 @@ void EyeTracker::testPossibleCentersFormula(int x, int y, unsigned char weight, 
             double magnitude = sqrt((dx * dx) + (dy * dy));
             dx = dx / magnitude;
             dy = dy / magnitude;
-            double dotProduct = dx*gx + dy*gy;
-            dotProduct = std::max(0.0,dotProduct);
+            double dotProduct = std::max(0.0, dx*gx + dy*gy);
             // square and multiply by the weight
             if (kEnableWeight) {
                 Or[cx] += dotProduct * dotProduct * (weight/kWeightDivisor);
@@ -246,4 +187,41 @@ void EyeTracker::testPossibleCentersFormula(int x, int y, unsigned char weight, 
             }
         }
     }
+}
+
+cv::Mat EyeTracker::matrixMagnitude(const cv::Mat &matX, const cv::Mat &matY) {
+    cv::Mat mags(matX.rows, matX.cols, CV_64F);
+    for (int y = 0; y < matX.rows; y++) {
+        const double *Xr = matX.ptr<double>(y);
+        const double *Yr = matY.ptr<double>(y);
+        double *Mr = mags.ptr<double>(y);
+        for (int x = 0; x < matX.cols; x++) {
+            double gX = Xr[x], gY = Yr[x];
+            double magnitude = sqrt((gX * gX) + (gY * gY));
+            Mr[x] = magnitude;
+        }
+    }
+    return mags;
+}
+
+double EyeTracker::computeDynamicThreshold(const cv::Mat &mat, double stdDevFactor) {
+    cv::Scalar stdMagnGrad, meanMagnGrad;
+    cv::meanStdDev(mat, meanMagnGrad, stdMagnGrad);
+    double stdDev = stdMagnGrad[0] / sqrt(mat.rows*mat.cols);
+    return stdDevFactor * stdDev + meanMagnGrad[0];
+}
+
+cv::Mat EyeTracker::computeMatXGradient(const cv::Mat &mat) {
+    cv::Mat out(mat.rows, mat.cols, CV_64F);
+    for (int y = 0; y < mat.rows; y++) {
+        const uchar *mr = mat.ptr<uchar>(y);
+        double *Or = out.ptr<double>(y);
+
+        Or[0] = mr[1] - mr[0];  // first
+        for (int x = 1; x < mat.cols - 1; x++) {
+            Or[x] = (mr[x+1] - mr[x-1]) / 2.0;
+        }
+        Or[mat.cols-1] = mr[mat.cols-1] - mr[mat.cols-2];  // last
+    }
+    return out;
 }

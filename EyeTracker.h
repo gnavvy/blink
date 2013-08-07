@@ -11,32 +11,49 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 
-#include "helpers.h"
-#include "constants.h"
-
-#define kEyeLeft true;
-#define kEyeRight false;
-
 class EyeTracker {
 public:
     EyeTracker();
-
     void Start();
 
 private:
-    const std::string faceCascadePath = "../../../res/haarcascade_frontalface_alt.xml";
-//    const std::string eyesCascadePath = "../../../res/haarcascade_eye_tree_eyeglasses.xml";
-    const std::string leftEyeCascadePath = "../../../res/haarcascade_lefteye_2splits.xml";
-    const std::string rightEyeCascadePath = "../../../res/haarcascade_righteye_2splits.xml";
-    cv::CascadeClassifier faceCascade, leftEyeCascade, rightEyeCascase;
-//    cv::CascadeClassifier eyesCascade;
+    const std::string kWindowTitle = "Capture - Face detection";
+    const std::string kFaceCascadePath = "../../../res/haarcascade_frontalface_alt.xml";
+    const std::string kEyesCascadePath = "../../../res/haarcascade_eye_tree_eyeglasses.xml";
+
+    // Size constants
+    const float kEyeTop     = .30;
+    const float kEyeSide    = .15;
+    const float kEyeHeight  = .20;
+    const float kEyeWidth   = .30;
+    const float kMinFace    = 300;
+    const float kMinEyes    = 100;
+
+    const bool kUseCascade = false;
+
+    // Algorithm Parameters
+    const int kFastEyeWidth = 50;
+    const int kWeightBlurSize = 5;
+    const bool kEnableWeight = true;
+    const float kWeightDivisor = 150.0;
+    const double kGradientThreshold = 50.0;
+
+    cv::CascadeClassifier faceCascade, eyesCascade;
     cv::Mat debugImage_;
     cv::Mat sobel, sobelx, sobely;
+    std::deque<cv::Rect> faceBuffer_;
+
+    // ------------------------ //
 
     cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow);
     void findEyes(cv::Mat& faceROI, cv::Rect& faceRegion);
     void detectAndDisplay(cv::Mat& frame);
-    void testPossibleCentersFormula(int x, int y, unsigned char weight, double gx, double gy, cv::Mat &out);
+    void testPossibleCenters(int x, int y, unsigned char weight, double gx, double gy, cv::Mat &out);
+
+    cv::Mat matrixMagnitude(const cv::Mat &matX, const cv::Mat &matY);
+    cv::Mat computeMatXGradient(const cv::Mat &mat);
+    double computeDynamicThreshold(const cv::Mat &mat, double stdDevFactor);
+
 
     std::vector<cv::Rect> estimateEyesRegion(const cv::Rect& faceRegion);
 };
