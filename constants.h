@@ -5,10 +5,10 @@
 const bool kPlotVectorField = false;
 
 // Size constants
-const int kEyePercentTop = 25;
-const int kEyePercentSide = 13;
-const int kEyePercentHeight = 30;
-const int kEyePercentWidth = 35;
+const float kEyePercentTop      = .25;
+const float kEyePercentSide     = .13;
+const float kEyePercentHeight   = .30;
+const float kEyePercentWidth    = .35;
 
 // Preprocessing
 const bool kSmoothFaceImage = false;
@@ -26,6 +26,6 @@ const bool kEnablePostProcess = true;
 const float kPostProcessThreshold = 0.97;
 
 // Eye Corner
-const bool kEnableEyeCorner = false;
+//const bool kEnableEyeCorner = false;
 
 #endif // CONSTANTS_H

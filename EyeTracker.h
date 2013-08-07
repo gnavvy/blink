@@ -20,30 +20,18 @@
 class EyeTracker {
 public:
     EyeTracker();
-    void DetectAndDisplay(cv::Mat frame);
+
     void Start();
 
 private:
-    const std::string face_cascade_name = "../../../res/haarcascade_frontalface_alt.xml";
-    cv::CascadeClassifier face_cascade;
-    cv::Mat skinCrCbHist = cv::Mat::zeros(cv::Size(256, 256), CV_8UC1);
-    cv::Mat *leftCornerKernel;
-    cv::Mat *rightCornerKernel;
+    const std::string faceCascadePath = "../../../res/haarcascade_frontalface_alt.xml";
+    const std::string eyesCascadePath = "../../../res/haarcascade_eye_tree_eyeglasses.xml";
+    cv::CascadeClassifier faceCascade;
+    cv::CascadeClassifier eyesCascade;
     cv::Mat debugImage_;
-    float kEyeCornerKernel[4][6] = {
-        {-1,-1,-1, 1, 1, 1},
-        {-1,-1,-1,-1, 1, 1},
-        {-1,-1,-1,-1, 0, 3},
-        { 1, 1, 1, 1, 1, 1},
-    };
-
-    void createCornerKernels();
-    void releaseCornerKernels();
-    void findEyes(cv::Mat frame_gray, cv::Rect face);
+    void findEyes(cv::Mat frameGray, cv::Rect face);
+    void detectAndDisplay(cv::Mat &frame);
     cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow);
-    cv::Point2f findEyeCorner(cv::Mat region, bool left, bool left2);
-    cv::Point2f findSubpixelEyeCorner(cv::Mat region, cv::Point maxP);
-    cv::Mat eyeCornerMap(const cv::Mat &region, bool left, bool left2);
 
     void testPossibleCentersFormula(int x, int y, unsigned char weight, double gx, double gy, cv::Mat &out);
 
