@@ -3,14 +3,18 @@
 EyeTracker::EyeTracker() {}
 
 void EyeTracker::Start() {
-    if (!faceCascade.load(faceCascadePath) || !eyesCascade.load(eyesCascadePath)) {
-        std::cerr << "cannot load cascade files" << std::endl;
+    if (!faceCascade.load(faceCascadePath)) {
+        std::cerr << "cannot load face cascade files" << std::endl;
         exit(EXIT_FAILURE);
     }
 
-    std::string main_window_name = "Capture - Face detection";
-    cv::namedWindow(main_window_name,CV_WINDOW_NORMAL);
-    cv::moveWindow(main_window_name, 400, 100);
+    if (!leftEyeCascade.load(leftEyeCascadePath) || !rightEyeCascase.load(rightEyeCascadePath)) {
+        std::cerr << "cannot load eyes cascade files" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    cv::namedWindow(kWindowTitle,CV_WINDOW_NORMAL);
+    cv::moveWindow(kWindowTitle, 400, 100);
     cv::namedWindow("Right Eye",CV_WINDOW_NORMAL);
     cv::moveWindow("Right Eye", 10, 600);
     cv::namedWindow("Left Eye",CV_WINDOW_NORMAL);
@@ -27,8 +31,8 @@ void EyeTracker::Start() {
 
             cv::flip(frame, frame, 1);  // mirror
             detectAndDisplay(frame);
-            cv::imshow(main_window_name, frame);
 
+            cv::imshow(kWindowTitle, frame);
             if (static_cast<char>(cv::waitKey(10)) == 'c') {
                 break;
             }
@@ -36,86 +40,114 @@ void EyeTracker::Start() {
     }
 }
 
-void EyeTracker::detectAndDisplay(cv::Mat &frame) {
+void EyeTracker::detectAndDisplay(cv::Mat& frame) {
     std::vector<cv::Rect> faces;
     cv::cvtColor(frame, frame, CV_BGR2GRAY);
+    cv::equalizeHist(frame, frame);
 
     // detect faces
-    faceCascade.detectMultiScale(frame, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, cv::Size(150, 150));
+    faceCascade.detectMultiScale(frame, faces, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, cv::Size(200, 200));
 
     for (unsigned int i = 0; i < faces.size(); i++) {
-        cv::rectangle(frame, faces[i], 1234);
-        findEyes(frame, faces[i]);
+        cv::Rect faceRegion = faces[i];
+        std::vector<cv::Rect> eyesRegion = estimateEyesRegion(faceRegion);
+
+        cv::Mat faceROI = frame(faceRegion);
+//        cv::Mat eyesROI = faceROI(eyesRegion);
+
+        if (kUseCascade) {
+            std::vector<cv::Rect> leftEyes, rightEyes;
+            leftEyeCascade.detectMultiScale(faceROI, leftEyes, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, cv::Size(50, 50));
+            rightEyeCascase.detectMultiScale(faceROI, rightEyes, 1.1, 2, 0|CV_HAAR_SCALE_IMAGE, cv::Size(50, 50));
+
+            for (unsigned int j = 0; j < leftEyes.size(); j++) {
+                cv::Point center(faceRegion.x + leftEyes[j].x + leftEyes[j].width*0.5,
+                                 faceRegion.y + leftEyes[j].y + leftEyes[j].height*0.5);
+                int radius = cvRound((leftEyes[j].width + leftEyes[i].height)*0.25);
+                cv::circle(frame, center, radius, cv::Scalar(255, 0, 0), 2, 2, 0);
+            }
+
+            for (unsigned int j = 0; j < rightEyes.size(); j++) {
+                cv::Point center(faceRegion.x + rightEyes[j].x + rightEyes[j].width*0.5,
+                                 faceRegion.y + rightEyes[j].y + rightEyes[j].height*0.5);
+                int radius = cvRound((rightEyes[j].width + rightEyes[i].height)*0.25);
+                cv::circle(frame, center, radius, cv::Scalar(0, 0, 255), 2, 2, 0);
+            }
+        } else {    // use gradient
+            findEyes(faceROI, faceRegion);
+        }
     }
 }
 
-void EyeTracker::findEyes(cv::Mat frameGray, cv::Rect face) {
-    cv::Mat faceROI = frameGray(face);
-    cv::Mat debugFace = faceROI;
+std::vector<cv::Rect> EyeTracker::estimateEyesRegion(const cv::Rect& faceRegion) {
+    std::vector<cv::Rect> eyesRegion;
 
-    if (kSmoothFaceImage) {
-        double sigma = kSmoothFaceFactor * face.width;
-        cv::GaussianBlur( faceROI, faceROI, cv::Size( 0, 0 ), sigma);
-    }
-
-    // find eye regions and draw them
-    int eyeRegionWidth = face.width * kEyePercentWidth;
-    int eyeRegionHeight = face.width * kEyePercentHeight;
-    int eyeRegionTop = face.height * kEyePercentTop;
-    int eyeRegionLeft = face.width * kEyePercentSide;
-    int eyeRegionRight = face.width - eyeRegionWidth - eyeRegionLeft;
+    int eyeRegionLeft   = faceRegion.width  * kEyeSide;
+    int eyeRegionTop    = faceRegion.height * kEyeTop;
+    int eyeRegionWidth  = faceRegion.width  * kEyeWidth;
+    int eyeRegionHeight = faceRegion.height * kEyeHeight;
+    int eyeRegionRight  = faceRegion.width  - eyeRegionWidth - eyeRegionLeft;
 
     cv::Rect leftEyeRegion(eyeRegionLeft, eyeRegionTop, eyeRegionWidth, eyeRegionHeight);
     cv::Rect rightEyeRegion(eyeRegionRight, eyeRegionTop, eyeRegionWidth, eyeRegionHeight);
 
+    eyesRegion.push_back(leftEyeRegion);
+    eyesRegion.push_back(rightEyeRegion);
+
+    return eyesRegion;
+}
+
+void EyeTracker::findEyes(cv::Mat& faceROI, cv::Rect& faceRegion) {
+    std::vector<cv::Rect> eyesRegions = estimateEyesRegion(faceRegion);
+
     // find eye centers
-    cv::Point leftPupil = findEyeCenter(faceROI, leftEyeRegion, "Left Eye");
-    cv::Point rightPupil = findEyeCenter(faceROI, rightEyeRegion, "Right Eye");
+    cv::Point leftCenter = findEyeCenter(faceROI, eyesRegions[0], "Left Eye");
+    cv::Point rightCenter = findEyeCenter(faceROI, eyesRegions[1], "Right Eye");
 
     // find corner regions
-    cv::Rect leftLeftCornerRegion(leftEyeRegion); {
-        leftLeftCornerRegion.width = leftPupil.x;
+    cv::Rect leftLeftCornerRegion(eyesRegions[0]); {
+        leftLeftCornerRegion.width = leftCenter.x;
         leftLeftCornerRegion.height /= 2;
         leftLeftCornerRegion.y += leftLeftCornerRegion.height / 2;
     }
-    cv::Rect leftRightCornerRegion(leftEyeRegion); {
-        leftRightCornerRegion.width -= leftPupil.x;
+    cv::Rect leftRightCornerRegion(eyesRegions[0]); {
+        leftRightCornerRegion.width -= leftCenter.x;
         leftRightCornerRegion.height /= 2;
-        leftRightCornerRegion.x += leftPupil.x;
+        leftRightCornerRegion.x += leftCenter.x;
         leftRightCornerRegion.y += leftRightCornerRegion.height / 2;
     }
-    cv::Rect rightLeftCornerRegion(rightEyeRegion); {
-        rightLeftCornerRegion.width = rightPupil.x;
+    cv::Rect rightLeftCornerRegion(eyesRegions[1]); {
+        rightLeftCornerRegion.width = rightCenter.x;
         rightLeftCornerRegion.height /= 2;
         rightLeftCornerRegion.y += rightLeftCornerRegion.height / 2;
     }
-    cv::Rect rightRightCornerRegion(rightEyeRegion); {
-        rightRightCornerRegion.width -= rightPupil.x;
+    cv::Rect rightRightCornerRegion(eyesRegions[1]); {
+        rightRightCornerRegion.width -= rightCenter.x;
         rightRightCornerRegion.height /= 2;
-        rightRightCornerRegion.x += rightPupil.x;
+        rightRightCornerRegion.x += rightCenter.x;
         rightRightCornerRegion.y += rightRightCornerRegion.height / 2;
     }
 
-    cv::rectangle(debugFace, leftRightCornerRegion, 200);
-    cv::rectangle(debugFace, leftLeftCornerRegion, 200);
-    cv::rectangle(debugFace, rightLeftCornerRegion, 200);
-    cv::rectangle(debugFace, rightRightCornerRegion, 200);
+    cv::rectangle(faceROI, leftRightCornerRegion, 200, 2, 2, 0);
+    cv::rectangle(faceROI, leftLeftCornerRegion, 200, 2, 2, 0);
+    cv::rectangle(faceROI, rightLeftCornerRegion, 200, 2, 2, 0);
+    cv::rectangle(faceROI, rightRightCornerRegion, 200, 2, 2, 0);
 
     // change eye centers to face coordinates
-    leftPupil.x += leftEyeRegion.x;
-    leftPupil.y += leftEyeRegion.y;
-    rightPupil.x += rightEyeRegion.x;
-    rightPupil.y += rightEyeRegion.y;
+    leftCenter.x += eyesRegions[0].x;
+    leftCenter.y += eyesRegions[0].y;
+    rightCenter.x += eyesRegions[1].x;
+    rightCenter.y += eyesRegions[1].y;
 
     // draw eye centers
-    cv::circle(debugFace, leftPupil, 3, 1234);
-    cv::circle(debugFace, rightPupil, 3, 1234);
+    cv::circle(faceROI, leftCenter, 3, 1234);
+    cv::circle(faceROI, rightCenter, 3, 1234);
 }
 
 cv::Point EyeTracker::findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow) {
-    cv::Mat eyeRoIunscaled = face(eye);
+    cv::Mat eyeROIunscaled = face(eye);
     cv::Mat eyeROI;
-    scaleToFastSize(eyeRoIunscaled, eyeROI);
+    scaleToFastSize(eyeROIunscaled, eyeROI);
     // draw eye region
     cv::rectangle(face, eye, 1234);
 
@@ -139,7 +171,9 @@ cv::Point EyeTracker::findEyeCenter(cv::Mat face, cv::Rect eye, std::string debu
             yr[x] = mag > gradientThreshold ? gy / mag : 0.0;
         }
     }
-    cv::imshow(debugWindow,gradientX);
+
+    cv::imshow(debugWindow, gradientX);
+
     // create a blurred and inverted image for weighting
     cv::Mat weight;
     cv::GaussianBlur( eyeROI, weight, cv::Size( kWeightBlurSize, kWeightBlurSize ), 0, 0 );       // ?
@@ -180,11 +214,12 @@ cv::Point EyeTracker::findEyeCenter(cv::Mat face, cv::Rect eye, std::string debu
         double floodThreshold = maxVal * kPostProcessThreshold;
         cv::threshold(out, floodClone, floodThreshold, 0.0f, cv::THRESH_TOZERO);
         if (kPlotVectorField) {
-            cv::imwrite("eyeFrame.png", eyeRoIunscaled);
+            cv::imwrite("eyeFrame.png", eyeROIunscaled);
         }
         cv::Mat mask = floodKillEdges(floodClone);
         cv::minMaxLoc(out, nullptr, &maxVal, nullptr, &maxP, mask);
     }
+
     return unscalePoint(maxP, eye);
 }
 

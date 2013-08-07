@@ -1,18 +1,18 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+const std::string kWindowTitle = "Capture - Face detection";
+
 // Debugging
 const bool kPlotVectorField = false;
 
 // Size constants
-const float kEyePercentTop      = .25;
-const float kEyePercentSide     = .13;
-const float kEyePercentHeight   = .30;
-const float kEyePercentWidth    = .35;
+const float kEyeTop      = .30;
+const float kEyeSide     = .15;
+const float kEyeHeight   = .20;
+const float kEyeWidth    = .30;
 
-// Preprocessing
-const bool kSmoothFaceImage = false;
-const float kSmoothFaceFactor = 0.005;
+const bool kUseCascade = false;
 
 // Algorithm Parameters
 const int kFastEyeWidth = 50;
@@ -22,10 +22,7 @@ const float kWeightDivisor = 150.0;
 const double kGradientThreshold = 50.0;
 
 // Postprocessing
-const bool kEnablePostProcess = true;
+const bool kEnablePostProcess = false;
 const float kPostProcessThreshold = 0.97;
-
-// Eye Corner
-//const bool kEnableEyeCorner = false;
 
 #endif // CONSTANTS_H

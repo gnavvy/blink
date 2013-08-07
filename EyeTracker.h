@@ -25,17 +25,20 @@ public:
 
 private:
     const std::string faceCascadePath = "../../../res/haarcascade_frontalface_alt.xml";
-    const std::string eyesCascadePath = "../../../res/haarcascade_eye_tree_eyeglasses.xml";
-    cv::CascadeClassifier faceCascade;
-    cv::CascadeClassifier eyesCascade;
+//    const std::string eyesCascadePath = "../../../res/haarcascade_eye_tree_eyeglasses.xml";
+    const std::string leftEyeCascadePath = "../../../res/haarcascade_lefteye_2splits.xml";
+    const std::string rightEyeCascadePath = "../../../res/haarcascade_righteye_2splits.xml";
+    cv::CascadeClassifier faceCascade, leftEyeCascade, rightEyeCascase;
+//    cv::CascadeClassifier eyesCascade;
     cv::Mat debugImage_;
-    void findEyes(cv::Mat frameGray, cv::Rect face);
-    void detectAndDisplay(cv::Mat &frame);
-    cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow);
+    cv::Mat sobel, sobelx, sobely;
 
+    cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow);
+    void findEyes(cv::Mat& faceROI, cv::Rect& faceRegion);
+    void detectAndDisplay(cv::Mat& frame);
     void testPossibleCentersFormula(int x, int y, unsigned char weight, double gx, double gy, cv::Mat &out);
 
-
+    std::vector<cv::Rect> estimateEyesRegion(const cv::Rect& faceRegion);
 };
 
 #endif // EYETRACKER_H
