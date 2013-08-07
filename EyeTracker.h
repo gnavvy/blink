@@ -45,17 +45,14 @@ private:
 
     // ------------------------ //
 
-    cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow);
-    void findEyes(cv::Mat& faceROI, cv::Rect& faceRegion);
+    cv::Point findEyeCenter(cv::Mat& eyeROI, std::string debugWindow);
+    void findEyes(cv::Mat& faceROI, const cv::Rect& faceRegion);
     void detectAndDisplay(cv::Mat& frame);
     void testPossibleCenters(int x, int y, unsigned char weight, double gx, double gy, cv::Mat &out);
 
     cv::Mat matrixMagnitude(const cv::Mat &matX, const cv::Mat &matY);
     cv::Mat computeMatXGradient(const cv::Mat &mat);
     double computeDynamicThreshold(const cv::Mat &mat, double stdDevFactor);
-
-
-    std::vector<cv::Rect> estimateEyesRegion(const cv::Rect& faceRegion);
 };
 
 #endif // EYETRACKER_H
