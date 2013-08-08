@@ -1,6 +1,9 @@
 #include "EyeTracker.h"
 
-EyeTracker::EyeTracker() {}
+EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {
+    kHistRange.push_back(0);
+    kHistRange.push_back(256);
+}
 
 void EyeTracker::Start() {
     if (!faceCascade.load(kFaceCascadePath)) {
@@ -29,7 +32,7 @@ void EyeTracker::Start() {
             cv::flip(frame, frame, 1);  // mirror
             detectAndDisplay(frame);
             cv::imshow(kWindowTitle, frame);
-            if (static_cast<char>(cv::waitKey(10)) == 'c') { break; }
+            if (static_cast<char>(cv::waitKey(10)) == 27 /*esc*/) { exit(EXIT_SUCCESS); }
         }
     }
 }
@@ -37,6 +40,7 @@ void EyeTracker::Start() {
 void EyeTracker::detectAndDisplay(cv::Mat& frame) {
     std::vector<cv::Rect> faces;
     cv::cvtColor(frame, frame, CV_BGR2GRAY);
+    cv::equalizeHist(frame, frame);
 
     // detect faces
     faceCascade.detectMultiScale(frame, faces, 1.1, 2, CV_HAAR_FIND_BIGGEST_OBJECT, cv::Size(kMinFace, kMinFace));
@@ -49,11 +53,16 @@ void EyeTracker::detectAndDisplay(cv::Mat& frame) {
     if (kUseCascade) {
         std::vector<cv::Rect> eyesRegion;
         eyesCascade.detectMultiScale(faceROI, eyesRegion, 1.2, 2, CV_HAAR_SCALE_IMAGE, cv::Size(kMinEyes, kMinEyes));
-        for (unsigned int j = 0; j < eyesRegion.size(); j++) {
+        numEyesCurr = eyesRegion.size();
+        if (numEyesCurr == 2) {         // eye open
+            numEyesHist++;
+        } else if (numEyesCurr == 0 && numEyesHist > 10) {  // eye close
+            numEyesHist = 0;
+            emit blinked();
+        }
+        for (unsigned int j = 0; j < numEyesCurr; j++) {
             cv::Rect eyeRegion = eyesRegion[j];
-            cv::Mat eyeROI = faceROI(eyeRegion);
-            cv::Point center = findEyeCenter(eyeROI, "Left Eye");
-            cv::circle(eyeROI, center, 3, 1234);
+            cv::rectangle(faceROI, eyeRegion, 1234);
         }
     } else {
         findEyes(faceROI, faceRegion);
@@ -61,7 +70,7 @@ void EyeTracker::detectAndDisplay(cv::Mat& frame) {
 }
 
 void EyeTracker::findEyes(cv::Mat& faceROI, const cv::Rect &faceRegion) {
-    int eyeRegionLeft   = faceRegion.width  * kEyeSide;
+    int eyeRegionLeft   = faceRegion.width  * kEyeLeft;
     int eyeRegionTop    = faceRegion.height * kEyeTop;
     int eyeRegionWidth  = faceRegion.width  * kEyeWidth;
     int eyeRegionHeight = faceRegion.height * kEyeHeight;
@@ -74,23 +83,8 @@ void EyeTracker::findEyes(cv::Mat& faceROI, const cv::Rect &faceRegion) {
     cv::Mat rightEyeROI = faceROI(rightEyeRegion);
 
     // find eye centers
-    cv::Point leftCenter = findEyeCenter(leftEyeROI, "Left Eye");
-    cv::Point rightCenter = findEyeCenter(rightEyeROI, "Right Eye");
-
-//    eyeLs_.push_back(leftCenter);
-//    eyeRs_.push_back(rightCenter);
-//    std::cout << eyeLs_.size() << "," << eyeRs_.size() << std::endl;
-//    if (eyeLs_.size() > kEyeBufferSize) eyeLs_.pop_front();
-//    if (eyeRs_.size() > kEyeBufferSize) eyeRs_.pop_front();
-//    cv::Point cL(0,0), cR(0,0);
-//    for (auto eye : eyeLs_) { cL.x += eye.x; cL.y += eye.y; }
-//    for (auto eye : eyeRs_) { cR.x += eye.x; cR.y += eye.y; }
-
-//    cL.x /= eyeLs_.size(); cL.y /= eyeLs_.size();
-//    cR.x /= eyeRs_.size(); cR.y /= eyeRs_.size();
-//    std::cout << cL.x << "," << cL.y << std::endl;
-//    leftCenter = cL;
-//    rightCenter = cR;
+    cv::Point leftCenter = findEyeCenter(leftEyeROI);
+    cv::Point rightCenter = findEyeCenter(rightEyeROI);
 
     // change eye centers to face coordinates
     leftCenter.x += leftEyeRegion.x;
@@ -113,23 +107,33 @@ void EyeTracker::findEyes(cv::Mat& faceROI, const cv::Rect &faceRegion) {
     cv::Mat refinedLEyeROI = faceROI(refinedLEyeRegion);
     cv::Mat refinedREyeROI = faceROI(refinedREyeRegion);
 
-    int histSize = 256;
     float range[] = { 0, 256 };  // 256 is exclusive
     const float* histRange = { range };
 
-    cv::calcHist(&eyeLROIs_.front(), 1, 0, cv::Mat(), eyeLHist_, 1, &histSize, &histRange, true, false);
-
-    eyeLROIs_.push_back(refinedLEyeROI);
-    if (eyeLROIs_.size() > kEyeBufferSize) {
-        eyeLROIs_.pop_front();
+    if (eyeLROIs_.size() < 10) {
+        eyeLROIs_.push_back(refinedLEyeROI);
+        return;
     }
 
-    std::vector<cv::Mat> mats;
-    mats.push_back(refinedLEyeROI);
+    cv::calcHist(&eyeLROIs_[0], 1, 0, cv::Mat(), eyeLHistHistory_, 1, &kHistRes, &histRange, true, false);
+    cv::calcHist(&refinedLEyeROI, 1, 0, cv::Mat(), eyeLHistCurrent_, 1, &kHistRes, &histRange, true, false);
 
-    cv::Mat currentLHist;
-    cv::calcHist(&eyeLROIs_.front(), 1, 0, cv::Mat(), currentLHist, 1, &histSize, &histRange, true, false);
+//    cv::equalizeHist(eyeLHistHistory_, eyeLHistHistory_);
+//    cv::equalizeHist(eyeLHistCurrent_, eyeLHistCurrent_);
 
+    cv::normalize(eyeLHistHistory_, eyeLHistHistory_, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
+    cv::normalize(eyeLHistCurrent_, eyeLHistCurrent_, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
+
+    double result = cv::compareHist(eyeLHistHistory_, eyeLHistCurrent_, CV_COMP_CHISQR);
+    if (result > 100) {
+//        emit this->blinked();
+        std::cout << result << std::endl;
+    } else {
+        eyeLROIs_.push_back(refinedLEyeROI);
+        if (eyeLROIs_.size() > kEyeBufferSize) {
+            eyeLROIs_.pop_front();
+        }
+    }
 
     // draw eye region
     cv::rectangle(faceROI, refinedLEyeRegion, 1234);
@@ -141,7 +145,7 @@ void EyeTracker::findEyes(cv::Mat& faceROI, const cv::Rect &faceRegion) {
     // need to smooth center
 }
 
-cv::Point EyeTracker::findEyeCenter(cv::Mat &eyeROI, std::string debugWindow) {
+cv::Point EyeTracker::findEyeCenter(cv::Mat &eyeROI) {
 //    cv::imshow(debugWindow, eyeROI);
 
     float scaleRatio = static_cast<float>(kFastEyeWidth) / eyeROI.cols;

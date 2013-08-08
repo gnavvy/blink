@@ -8,18 +8,25 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     view = new QDeclarativeView;
     view->setSource(QUrl("qrc:/ui.qml"));
 
-    timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), this, SLOT(stimulate()));
-    timer->start(3000);
+    tracker = new EyeTracker();
+    connect(tracker, SIGNAL(blinked()), this, SLOT(stimulate()));
 
+    tracker->Start();
+//    timer = new QTimer(this);
+//    connect(timer, SIGNAL(timeout()), this, SLOT(stimulate()));
+//    timer->start(3000);
     return;
+
+//    timer->timeout();
 }
 
 MainWindow::~MainWindow() {
     delete view;
+    delete tracker;
 }
 
 void MainWindow::stimulate() {
+    std::cout << "stimulated" << std::endl;
 //    if (qrand() % 2) {
         flash();
 //    } else {

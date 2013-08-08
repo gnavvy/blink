@@ -1,11 +1,13 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QTimer>
+//#include <QTimer>
 #include <QThread>
 #include <QMainWindow>
 #include <QGraphicsBlurEffect>
 #include <QtDeclarative/QDeclarativeView>
+
+#include "EyeTracker.h"
 
 namespace Ui {
     class MainWindow;
@@ -26,7 +28,8 @@ public:
     
 private:
     QDeclarativeView *view;
-    QTimer *timer;
+    EyeTracker *tracker;
+//    QTimer *timer;
 
     void flash();
     void blur();
