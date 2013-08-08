@@ -113,6 +113,24 @@ void EyeTracker::findEyes(cv::Mat& faceROI, const cv::Rect &faceRegion) {
     cv::Mat refinedLEyeROI = faceROI(refinedLEyeRegion);
     cv::Mat refinedREyeROI = faceROI(refinedREyeRegion);
 
+    int histSize = 256;
+    float range[] = { 0, 256 };  // 256 is exclusive
+    const float* histRange = { range };
+
+    cv::calcHist(&eyeLROIs_.front(), 1, 0, cv::Mat(), eyeLHist_, 1, &histSize, &histRange, true, false);
+
+    eyeLROIs_.push_back(refinedLEyeROI);
+    if (eyeLROIs_.size() > kEyeBufferSize) {
+        eyeLROIs_.pop_front();
+    }
+
+    std::vector<cv::Mat> mats;
+    mats.push_back(refinedLEyeROI);
+
+    cv::Mat currentLHist;
+    cv::calcHist(&eyeLROIs_.front(), 1, 0, cv::Mat(), currentLHist, 1, &histSize, &histRange, true, false);
+
+
     // draw eye region
     cv::rectangle(faceROI, refinedLEyeRegion, 1234);
     cv::rectangle(faceROI, refinedREyeRegion, 1234);
@@ -124,7 +142,7 @@ void EyeTracker::findEyes(cv::Mat& faceROI, const cv::Rect &faceRegion) {
 }
 
 cv::Point EyeTracker::findEyeCenter(cv::Mat &eyeROI, std::string debugWindow) {
-    cv::imshow(debugWindow, eyeROI);
+//    cv::imshow(debugWindow, eyeROI);
 
     float scaleRatio = static_cast<float>(kFastEyeWidth) / eyeROI.cols;
     cv::resize(eyeROI, eyeROI, cv::Size(kFastEyeWidth, scaleRatio * eyeROI.rows));  // scale down

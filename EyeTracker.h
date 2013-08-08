@@ -31,17 +31,22 @@ private:
 
     const bool kUseCascade = false;
 
-    const unsigned int kEyeBufferSize = 10;
+    const unsigned int kEyeBufferSize = 20;
     const int kFastEyeWidth = 50;
     const int kWeightBlurSize = 5;
     const bool kEnableWeight = true;
     const float kWeightDivisor = 150.0;
     const double kGradientThreshold = 50.0;
 
+//    const int kHistSize = 256;
+//    float range[] = { 0, 256 };
+//    const float* kHistRange = { range };
+
     cv::CascadeClassifier faceCascade, eyesCascade;
     cv::Mat debugImage_;
-    cv::Mat sobel, sobelx, sobely;
+    cv::Mat eyeLHist_;
     std::deque<cv::Point> eyeLs_, eyeRs_;
+    std::deque<cv::Mat> eyeLROIs_;
 
     // ------------------------ //
 
