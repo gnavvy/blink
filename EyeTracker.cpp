@@ -70,16 +70,27 @@ void EyeTracker::findEyes(cv::Mat& faceROI, const cv::Rect &faceRegion) {
     cv::Rect leftEyeRegion(eyeRegionLeft, eyeRegionTop, eyeRegionWidth, eyeRegionHeight);
     cv::Rect rightEyeRegion(eyeRegionRight, eyeRegionTop, eyeRegionWidth, eyeRegionHeight);
 
-    // draw eye region
-    cv::rectangle(faceROI, leftEyeRegion, 1234);
-    cv::rectangle(faceROI, rightEyeRegion, 1234);
-
     cv::Mat leftEyeROI = faceROI(leftEyeRegion);
     cv::Mat rightEyeROI = faceROI(rightEyeRegion);
 
     // find eye centers
     cv::Point leftCenter = findEyeCenter(leftEyeROI, "Left Eye");
     cv::Point rightCenter = findEyeCenter(rightEyeROI, "Right Eye");
+
+//    eyeLs_.push_back(leftCenter);
+//    eyeRs_.push_back(rightCenter);
+//    std::cout << eyeLs_.size() << "," << eyeRs_.size() << std::endl;
+//    if (eyeLs_.size() > kEyeBufferSize) eyeLs_.pop_front();
+//    if (eyeRs_.size() > kEyeBufferSize) eyeRs_.pop_front();
+//    cv::Point cL(0,0), cR(0,0);
+//    for (auto eye : eyeLs_) { cL.x += eye.x; cL.y += eye.y; }
+//    for (auto eye : eyeRs_) { cR.x += eye.x; cR.y += eye.y; }
+
+//    cL.x /= eyeLs_.size(); cL.y /= eyeLs_.size();
+//    cR.x /= eyeRs_.size(); cR.y /= eyeRs_.size();
+//    std::cout << cL.x << "," << cL.y << std::endl;
+//    leftCenter = cL;
+//    rightCenter = cR;
 
     // change eye centers to face coordinates
     leftCenter.x += leftEyeRegion.x;
@@ -90,31 +101,48 @@ void EyeTracker::findEyes(cv::Mat& faceROI, const cv::Rect &faceRegion) {
     // draw eye centers
     cv::circle(faceROI, leftCenter, 3, 1234);
     cv::circle(faceROI, rightCenter, 3, 1234);
+
+    int refinedLEyeLeft = leftCenter.x - eyeRegionWidth / 2;
+    int refinedLEyeTop  = leftCenter.y - eyeRegionHeight / 2;
+    int refinedREyeLeft = rightCenter.x - eyeRegionWidth / 2;
+    int refinedREyeTop  = rightCenter.y - eyeRegionHeight / 2;
+
+    cv::Rect refinedLEyeRegion(refinedLEyeLeft, refinedLEyeTop, eyeRegionWidth, eyeRegionHeight);
+    cv::Rect refinedREyeRegion(refinedREyeLeft, refinedREyeTop, eyeRegionWidth, eyeRegionHeight);
+
+    cv::Mat refinedLEyeROI = faceROI(refinedLEyeRegion);
+    cv::Mat refinedREyeROI = faceROI(refinedREyeRegion);
+
+    // draw eye region
+    cv::rectangle(faceROI, refinedLEyeRegion, 1234);
+    cv::rectangle(faceROI, refinedREyeRegion, 1234);
+
+    cv::imshow("Left Eye", refinedLEyeROI);
+    cv::imshow("Right Eye", refinedREyeROI);
+
+    // need to smooth center
 }
 
 cv::Point EyeTracker::findEyeCenter(cv::Mat &eyeROI, std::string debugWindow) {
+    cv::imshow(debugWindow, eyeROI);
+
     float scaleRatio = static_cast<float>(kFastEyeWidth) / eyeROI.cols;
     cv::resize(eyeROI, eyeROI, cv::Size(kFastEyeWidth, scaleRatio * eyeROI.rows));  // scale down
 
     cv::Mat gradientX = computeMatXGradient(eyeROI);
     cv::Mat gradientY = computeMatXGradient(eyeROI.t()).t();
     cv::Mat magnitudes = matrixMagnitude(gradientX, gradientY);
-    double gradientThreshold = computeDynamicThreshold(magnitudes, kGradientThreshold);
+    double threshod = computeDynamicThreshold(magnitudes, kGradientThreshold);
     // nomalize
     for (int y = 0; y < eyeROI.rows; y++) {
         double *xr = gradientX.ptr<double>(y);
         double *yr = gradientY.ptr<double>(y);
         double *mr = magnitudes.ptr<double>(y);
         for (int x = 0; x < eyeROI.cols; x++) {
-            double gx = xr[x];
-            double gy = yr[x];
-            double mag = mr[x];
-            xr[x] = mag > gradientThreshold ? gx / mag : 0.0;
-            yr[x] = mag > gradientThreshold ? gy / mag : 0.0;
+            xr[x] = mr[x] > threshod ? xr[x] / mr[x] : 0.0;
+            yr[x] = mr[x] > threshod ? yr[x] / mr[x] : 0.0;
         }
     }
-
-//    cv::imshow(debugWindow, gradientX);
 
     // create a blurred and inverted image for weighting
     cv::Mat weight;
@@ -126,7 +154,7 @@ cv::Point EyeTracker::findEyeCenter(cv::Mat &eyeROI, std::string debugWindow) {
         }
     }
 
-    cv::imshow(debugWindow, weight);
+//    cv::imshow(debugWindow, weight);
     // run the algorithm
     cv::Mat outSum = cv::Mat::zeros(eyeROI.rows, eyeROI.cols, CV_64F);
 

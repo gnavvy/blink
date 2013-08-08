@@ -22,16 +22,16 @@ private:
     const std::string kEyesCascadePath = "../../../res/haarcascade_eye_tree_eyeglasses.xml";
 
     // Size constants
-    const float kEyeTop     = .30;
-    const float kEyeSide    = .15;
-    const float kEyeHeight  = .20;
-    const float kEyeWidth   = .30;
+    const float kEyeTop     = .32;
+    const float kEyeSide    = .18;
+    const float kEyeHeight  = .15;
+    const float kEyeWidth   = .27;
     const float kMinFace    = 300;
     const float kMinEyes    = 100;
 
     const bool kUseCascade = false;
 
-    // Algorithm Parameters
+    const unsigned int kEyeBufferSize = 10;
     const int kFastEyeWidth = 50;
     const int kWeightBlurSize = 5;
     const bool kEnableWeight = true;
@@ -41,10 +41,11 @@ private:
     cv::CascadeClassifier faceCascade, eyesCascade;
     cv::Mat debugImage_;
     cv::Mat sobel, sobelx, sobely;
-    std::deque<cv::Rect> faceBuffer_;
+    std::deque<cv::Point> eyeLs_, eyeRs_;
 
     // ------------------------ //
 
+    cv::Point smoothedCenter();
     cv::Point findEyeCenter(cv::Mat& eyeROI, std::string debugWindow);
     void findEyes(cv::Mat& faceROI, const cv::Rect& faceRegion);
     void detectAndDisplay(cv::Mat& frame);
