@@ -1,52 +1,54 @@
 #include "MainWindow.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
-    setAttribute(Qt::WA_TranslucentBackground);
-    setStyleSheet("background:transparent;");
-    setWindowFlags(Qt::FramelessWindowHint);
+    pView_ = new QDeclarativeView; {
+        pView_->setSource(QUrl("qrc:/ui.qml"));
+        pView_->setAttribute(Qt::WA_TranslucentBackground);
+        pView_->setStyleSheet("background:transparent;");
+        pView_->setWindowFlags(Qt::FramelessWindowHint);
+    }
 
-    view = new QDeclarativeView;
-    view->setSource(QUrl("qrc:/ui.qml"));
+    pTimer_ = new QTimer(this);
+    connect(pTimer_, SIGNAL(timeout()), this, SLOT(update()));
+    pTimer_->start(1000);
 
-    tracker = new EyeTracker();
-    connect(tracker, SIGNAL(blinked()), this, SLOT(stimulate()));
-
-    tracker->Start();
-//    timer = new QTimer(this);
-//    connect(timer, SIGNAL(timeout()), this, SLOT(stimulate()));
-//    timer->start(3000);
-    return;
-
-//    timer->timeout();
+    pTracker_ = new EyeTracker;
+    connect(pTracker_, SIGNAL(blinked()), this, SLOT(blinked()));
+    pTracker_->Start();
 }
 
 MainWindow::~MainWindow() {
-    delete view;
-    delete tracker;
+    delete pView_;
+    delete pTracker_;
+    delete pTimer_;
+}
+
+void MainWindow::update() {
+    counter_++;
+    qDebug() << counter_;
+    if (counter_ > interval()) {
+        stimulate();
+    }
 }
 
 void MainWindow::stimulate() {
-    std::cout << "stimulated" << std::endl;
-//    if (qrand() % 2) {
-        flash();
-//    } else {
-//        blur();
-//    }
+    flash();
+    resetCounter();
 }
 
 void MainWindow::flash() {
-    view->showFullScreen();
-    view->raise();
+    pView_->showFullScreen();
+    pView_->raise();
     Sleeper::usleep(10); // cannot control this, quite disturbing
-    view->hide();
+    pView_->hide();
 }
 
 void MainWindow::blur() {
     QGraphicsBlurEffect blur;
     blur.setBlurHints(QGraphicsBlurEffect::QualityHint);
     blur.setBlurRadius(10);
-    view->setGraphicsEffect(&blur);
+    pView_->setGraphicsEffect(&blur);
     Sleeper::usleep(1000);
-    view->show();
-    view->graphicsEffect()->setEnabled(false);
+    pView_->show();
+    pView_->graphicsEffect()->setEnabled(false);
 }
