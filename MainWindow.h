@@ -5,30 +5,25 @@
 #include <QThread>
 #include <QMainWindow>
 #include <QDebug>
+#include <QStackedWidget>
 #include <QGraphicsBlurEffect>
 #include <QtDeclarative/QDeclarativeView>
 
+#include "Utilities.h"
 #include "EyeTracker.h"
 
 namespace Ui {
     class MainWindow;
 }
 
-class Sleeper : public QThread {
-public:
-    static void usleep(unsigned long usecs) { QThread::usleep(usecs); }
-    static void msleep(unsigned long msecs) { QThread::msleep(msecs); }
-    static void sleep(unsigned long secs)   { QThread::sleep(secs); }
-};
-
-class MainWindow : public QMainWindow {
+class MainWindow : public QStackedWidget {
     Q_OBJECT
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
 public slots:
-    void blinked() { resetCounter(); }
+    void resetCounter() { counter_ = 0; }
     void stimulate();
     void update();
     
@@ -38,7 +33,7 @@ private:
     QTimer *pTimer_;
 
     int  interval() { return 5; }
-    void resetCounter() { counter_ = 0; }
+//    void resetCounter() { counter_ = 0; }
     void flash();
     void blur();
 

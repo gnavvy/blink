@@ -1,6 +1,6 @@
 #include "MainWindow.h"
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget *parent) : QStackedWidget(parent) {
     pView_ = new QDeclarativeView; {
         pView_->setSource(QUrl("qrc:/ui.qml"));
         pView_->setAttribute(Qt::WA_TranslucentBackground);
@@ -13,14 +13,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     pTimer_->start(1000);
 
     pTracker_ = new EyeTracker;
-    connect(pTracker_, SIGNAL(blinked()), this, SLOT(blinked()));
+    connect(pTracker_, SIGNAL(blinked()), this, SLOT(resetCounter()));
     pTracker_->Start();
 }
 
 MainWindow::~MainWindow() {
     delete pView_;
-    delete pTracker_;
     delete pTimer_;
+    delete pTracker_;
 }
 
 void MainWindow::update() {
