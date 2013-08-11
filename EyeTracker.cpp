@@ -3,15 +3,14 @@
 EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {
     capture_ = cvCaptureFromCAM(-1);
 
-    if (!faceCascade.load(kFaceCascadePath)) {
-        std::cerr << "cannot load face cascade files" << std::endl;
+    if (!faceCascade.load(kFaceCascadePath) || !eyesCascade.load(kEyesCascadePath)) {
+        emit log("Cannot load cascade files...");
         exit(EXIT_FAILURE);
     }
+}
 
-    if (!eyesCascade.load(kEyesCascadePath)) {
-        std::cerr << "cannot load eyes cascade files" << std::endl;
-        exit(EXIT_FAILURE);
-    }
+EyeTracker::~EyeTracker() {
+    delete capture_;
 }
 
 void EyeTracker::Start() {

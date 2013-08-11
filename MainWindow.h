@@ -2,11 +2,14 @@
 #define MAINWINDOW_H
 
 #include <QtGui>
+#include <QFile>
 #include <QDebug>
 #include <QTimer>
 #include <QWidget>
 #include <QThread>
+#include <QDateTime>
 #include <QMainWindow>
+#include <QTextStream>
 #include <QStackedWidget>
 
 #include "Utilities.h"
@@ -25,22 +28,27 @@ public:
     ~MainWindow();
     
 public slots:
-    void resetCounter() { counter_ = 0; }
+    void onBlinkDetected();
+    void outputLog(const QString &msg);
     void log(QString msg) { qDebug() << msg; }
     void stimulate();
     void updateCounter();
 
 private:
     Ui::MainWindow *ui_;
-
     FlashWidget *pFlashWidget_;
 
-    EyeTracker *pTracker_;
     QTimer *pTimer_;
+
+    EyeTracker *pTracker_;
     QThread *pTrackerThread_;
 
-    int interval() { return 5; }
-    void setupWorkInThread();
+    void setupUI();
+    void setupTimer();
+    void setupWorker();
+
+    int  getInterval() { return 5; }
+    void resetCounter() { counter_ = 0; }
 
     int counter_ = 0;
 };

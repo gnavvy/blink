@@ -21,3 +21,4 @@ Makefile
 
 # Mac-app
 *.app/
+*.txt

@@ -2,10 +2,9 @@
 #define EYETRACKER_H
 
 #include <iostream>
-#include <QMutex>
 #include <QThread>
 #include <QImage>
-//#include <QObject>
+#include <QObject>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
@@ -14,6 +13,7 @@ class EyeTracker : public QObject {
     Q_OBJECT
 public:
     explicit EyeTracker(QObject *parent = 0);
+    virtual ~EyeTracker();
 
 public slots:
     void Start();
@@ -22,9 +22,6 @@ signals:
     void blinkDetected();
     void log(QString msg);
     void processedImage(const QImage& image);
-
-protected:
-    void run();
 
 private:
     const int kMinFace = 300;
