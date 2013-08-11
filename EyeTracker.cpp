@@ -1,8 +1,8 @@
 #include "EyeTracker.h"
 
-EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {}
+EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {
+    capture_ = cvCaptureFromCAM(-1);
 
-void EyeTracker::Start() {
     if (!faceCascade.load(kFaceCascadePath)) {
         std::cerr << "cannot load face cascade files" << std::endl;
         exit(EXIT_FAILURE);
@@ -12,29 +12,30 @@ void EyeTracker::Start() {
         std::cerr << "cannot load eyes cascade files" << std::endl;
         exit(EXIT_FAILURE);
     }
+}
 
-    cv::namedWindow(kWindowTitle,CV_WINDOW_NORMAL);
-    cv::moveWindow(kWindowTitle, 640, 100);
-
-    CvCapture *capture = cvCaptureFromCAM(-1);
-    cv::Mat frame;
-    if (capture) {
+void EyeTracker::Start() {
+    std::cout << "capturing" << std::endl;
+    if (capture_) {
         while (true) {
-            frame = cvQueryFrame(capture);
-            if (frame.empty()) { std::cerr << "no captured frame." << std::endl; break; }
-            cv::flip(frame, frame, 1);  // mirror
-            detectAndDisplay(frame);
-            cv::imshow(kWindowTitle, frame);
-            if (static_cast<char>(cv::waitKey(10)) == 27 /*esc*/) { exit(EXIT_SUCCESS); }
+            frame_ = cvQueryFrame(capture_);
+            if (frame_.empty()) {
+                emit log(QString("no captured frame."));
+                continue;
+            }
+
+            cv::cvtColor(frame_, frame_, CV_BGR2GRAY);
+            cv::flip(frame_, frame_, 1);
+            detectAndDisplay(frame_);
+
+//            QImage img = QImage((uchar*)(frame_.data), frame_.cols, frame_.rows, QImage::Format_Indexed8);
+//            emit processedImage(img);
         }
     }
 }
 
 void EyeTracker::detectAndDisplay(cv::Mat& frame) {
     std::vector<cv::Rect> faces;
-    cv::cvtColor(frame, frame, CV_BGR2GRAY);
-
-    // detect faces
     faceCascade.detectMultiScale(frame, faces, 1.1, 2, CV_HAAR_FIND_BIGGEST_OBJECT, cv::Size(kMinFace, kMinFace));
     if (faces.empty()) { return; }
 
@@ -49,7 +50,7 @@ void EyeTracker::detectAndDisplay(cv::Mat& frame) {
         numEyesHist++;
     } else if (numEyesCurr == 0 && numEyesHist > 10) {
         numEyesHist = 0;
-        emit blinked();
+        emit blinkDetected();
     }
     for (int j = 0; j < numEyesCurr; j++) {
         cv::Rect eyeRegion = eyeRegions[j];

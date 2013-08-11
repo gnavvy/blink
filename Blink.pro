@@ -24,17 +24,20 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = Blink
 TEMPLATE = app
 
-FORMS +=
+FORMS += \
+    MainWindow.ui
 
 HEADERS += \
-    MainWindow.h \
     EyeTracker.h \
-    Utilities.h
+    Utilities.h \
+    FlashWidget.h \
+    MainWindow.h
 
 SOURCES += \
     main.cpp \
-    MainWindow.cpp \
-    EyeTracker.cpp
+    EyeTracker.cpp \
+    FlashWidget.cpp \
+    MainWindow.cpp
 
 OTHER_FILES += \
     ui.qml

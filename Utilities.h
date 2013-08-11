@@ -1,6 +1,8 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
+#include <QThread>
+
 class Sleeper : public QThread {
 public:
     static void usleep(unsigned long usecs) { QThread::usleep(usecs); }

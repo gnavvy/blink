@@ -1,54 +1,46 @@
 #include "MainWindow.h"
+#include "ui_MainWindow.h"
 
-MainWindow::MainWindow(QWidget *parent) : QStackedWidget(parent) {
-    pView_ = new QDeclarativeView; {
-        pView_->setSource(QUrl("qrc:/ui.qml"));
-        pView_->setAttribute(Qt::WA_TranslucentBackground);
-        pView_->setStyleSheet("background:transparent;");
-        pView_->setWindowFlags(Qt::FramelessWindowHint);
-    }
+MainWindow::MainWindow(QWidget *parent) : QStackedWidget(parent), ui_(new Ui::MainWindow) {
+    ui_->setupUi(this);
+    pFlashWidget_ = new FlashWidget();
 
     pTimer_ = new QTimer(this);
-    connect(pTimer_, SIGNAL(timeout()), this, SLOT(update()));
+    connect(pTimer_, SIGNAL(timeout()), this, SLOT(updateCounter()));
     pTimer_->start(1000);
 
-    pTracker_ = new EyeTracker;
-    connect(pTracker_, SIGNAL(blinked()), this, SLOT(resetCounter()));
-    pTracker_->Start();
+    setupWorkInThread();
 }
 
 MainWindow::~MainWindow() {
-    delete pView_;
+    delete ui_;
     delete pTimer_;
     delete pTracker_;
+    delete pTrackerThread_;
 }
 
-void MainWindow::update() {
+void MainWindow::setupWorkInThread() {
+    pTrackerThread_ = new QThread;
+    pTracker_ = new EyeTracker();
+    pTracker_->moveToThread(pTrackerThread_);
+
+    connect(pTrackerThread_, SIGNAL(started()), pTracker_, SLOT(Start()));  // start tracker when thread stats
+    connect(pTracker_, SIGNAL(log(QString)), this, SLOT(log(QString)));
+    connect(pTracker_, SIGNAL(blinkDetected()), this, SLOT(resetCounter()));
+    pTrackerThread_->start();
+}
+
+void MainWindow::updateCounter() {
     counter_++;
     qDebug() << counter_;
     if (counter_ > interval()) {
+        qDebug() << "stimulate!";
         stimulate();
     }
 }
 
 void MainWindow::stimulate() {
-    flash();
+    pFlashWidget_->Flash();
     resetCounter();
 }
 
-void MainWindow::flash() {
-    pView_->showFullScreen();
-    pView_->raise();
-    Sleeper::usleep(10); // cannot control this, quite disturbing
-    pView_->hide();
-}
-
-void MainWindow::blur() {
-    QGraphicsBlurEffect blur;
-    blur.setBlurHints(QGraphicsBlurEffect::QualityHint);
-    blur.setBlurRadius(10);
-    pView_->setGraphicsEffect(&blur);
-    Sleeper::usleep(1000);
-    pView_->show();
-    pView_->graphicsEffect()->setEnabled(false);
-}
