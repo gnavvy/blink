@@ -5,12 +5,13 @@ MainWindow::MainWindow(QWidget *parent) : QStackedWidget(parent), ui_(new Ui::Ma
     setupUI();
     setupTimer();
     setupWorker();
+    start();
 }
 
 MainWindow::~MainWindow() {
-    outputLog(" |----------------------|");
-
+    end();
     delete ui_;
+    delete pFlashWidget_;
     delete pTimer_;
     delete pTracker_;
     delete pTrackerThread_;
@@ -23,28 +24,42 @@ void MainWindow::setupUI() {
 
 void MainWindow::setupTimer() {
     pTimer_ = new QTimer(this);
-    connect(pTimer_, SIGNAL(timeout()), this, SLOT(updateCounter()));
-    pTimer_->start(1000);
+    pTimer_->setInterval(1000);
+    connect(pTimer_, SIGNAL(timeout()), this, SLOT(updateTimer()));
+    pTimer_->start();
 }
 
 void MainWindow::setupWorker() {
-    pTrackerThread_ = new QThread; {
-        pTracker_ = new EyeTracker(); {
-            pTracker_->moveToThread(pTrackerThread_);
-            connect(pTracker_, SIGNAL(log(QString)), this, SLOT(outputLog(QString)));
-            connect(pTracker_, SIGNAL(blinkDetected()), this, SLOT(onBlinkDetected()));
-        }
-        connect(pTrackerThread_, SIGNAL(started()), pTracker_, SLOT(Start()));
-    }
-    pTrackerThread_->start();
+    pTrackerThread_ = new QThread;
+    pTracker_ = new EyeTracker;
+    pTracker_->moveToThread(pTrackerThread_);
 
-    outputLog(" |----------------------|");
+    connect(pTracker_, SIGNAL(blinkDetected()), this, SLOT(onBlinkDetected()));
+    connect(pTrackerThread_, SIGNAL(started()), pTracker_, SLOT(Start()));
 }
 
-void MainWindow::updateCounter() {
-    counter_++;
-    qDebug() << counter_;
-    if (counter_ > getInterval()) {
+void MainWindow::start() {
+    blinkCounter_ = 0;
+    startTime_ = QDateTime::currentDateTime();
+
+    pTrackerThread_->start();
+    outputLog(" |----------------------| ");
+}
+
+void MainWindow::end() {
+    pTracker_->StopTracking();
+
+    int timeSpan = startTime_.secsTo(QDateTime::currentDateTime());
+    float blinkRate = static_cast<float>(blinkCounter_) * 60 / timeSpan;
+    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
+
+    outputLog(" |----------------------| ");
+}
+
+void MainWindow::updateTimer() {
+    timerCounter_++;
+    qDebug() << timerCounter_;
+    if (timerCounter_ > getInterval()) {
         qDebug() << "stimulate!";
         stimulate();
     }
@@ -52,16 +67,18 @@ void MainWindow::updateCounter() {
 
 void MainWindow::stimulate() {
     pFlashWidget_->Flash();
-    resetCounter();
+    resetTimer();
 }
 
 void MainWindow::onBlinkDetected() {
-    resetCounter();
+    blinkCounter_++;
+    resetTimer();
     outputLog(" blink detected");
 }
 
 void inline MainWindow::outputLog(const QString &msg) {
-    QFile logFile("../../../log.txt");
+    QString fileName = QString("../../../log/").append(startTime_.toString()).append(".txt");
+    QFile logFile(fileName);
     if (logFile.open(QFile::ReadWrite|QFile::Append|QFile::Text)) {
         QTextStream outStream(&logFile);
         outStream << QDateTime::currentDateTime().toString() << msg << "\n";

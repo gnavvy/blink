@@ -2,26 +2,31 @@
 #define EYETRACKER_H
 
 #include <iostream>
-#include <QThread>
-#include <QImage>
+#include <QDebug>
 #include <QObject>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
+
+#include "Utilities.h"
 
 class EyeTracker : public QObject {
     Q_OBJECT
 public:
     explicit EyeTracker(QObject *parent = 0);
     virtual ~EyeTracker();
+    void StopTracking() { tracking = false; }
 
 public slots:
-    void Start();
+    void Start() { run(); }
+
+protected:
+    void run();
 
 signals:
     void blinkDetected();
+    void finished();
     void log(QString msg);
-    void processedImage(const QImage& image);
 
 private:
     const int kMinFace = 300;
@@ -30,14 +35,20 @@ private:
     const std::string kFaceCascadePath = "../../../res/haarcascade_frontalface_alt.xml";
     const std::string kEyesCascadePath = "../../../res/haarcascade_eye_tree_eyeglasses.xml";
 
+    cv::CascadeClassifier faceCascade;
+    cv::CascadeClassifier eyesCascade;
     CvCapture *capture_;
     cv::Mat frame_;
-    cv::CascadeClassifier faceCascade, eyesCascade;
+
     int numEyesCurr = 0;
     int numEyesPrev = 0;
     int numEyesHist = 0;
 
+    bool tracking = false;
+
+    void msleep(int ms);
     void detectAndDisplay(cv::Mat& frame);
+
 };
 
 #endif // EYETRACKER_H

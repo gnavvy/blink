@@ -1,25 +1,21 @@
 #include "EyeTracker.h"
 
 EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {
-    capture_ = cvCaptureFromCAM(-1);
-
     if (!faceCascade.load(kFaceCascadePath) || !eyesCascade.load(kEyesCascadePath)) {
         emit log("Cannot load cascade files...");
         exit(EXIT_FAILURE);
     }
+    tracking = true;
 }
 
-EyeTracker::~EyeTracker() {
-    delete capture_;
-}
+EyeTracker::~EyeTracker() {}
 
-void EyeTracker::Start() {
-    std::cout << "capturing" << std::endl;
+void EyeTracker::run() {
+    capture_ = cvCaptureFromCAM(-1);  // use default camera
     if (capture_) {
-        while (true) {
+        while (tracking) {
             frame_ = cvQueryFrame(capture_);
             if (frame_.empty()) {
-                emit log(QString("no captured frame."));
                 continue;
             }
 
@@ -27,10 +23,11 @@ void EyeTracker::Start() {
             cv::flip(frame_, frame_, 1);
             detectAndDisplay(frame_);
 
-//            QImage img = QImage((uchar*)(frame_.data), frame_.cols, frame_.rows, QImage::Format_Indexed8);
-//            emit processedImage(img);
+            msleep(30);
         }
+        cvReleaseCapture(&capture_);
     }
+    emit finished();
 }
 
 void EyeTracker::detectAndDisplay(cv::Mat& frame) {
@@ -55,4 +52,9 @@ void EyeTracker::detectAndDisplay(cv::Mat& frame) {
         cv::Rect eyeRegion = eyeRegions[j];
         cv::rectangle(faceROI, eyeRegion, 1234);
     }
+}
+
+void EyeTracker::msleep(int ms) {
+    struct timespec ts = {ms/1000, (ms%1000)*1000*1000};
+    nanosleep(&ts, nullptr);
 }
