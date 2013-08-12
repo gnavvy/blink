@@ -6,8 +6,8 @@
 
 QMAKE_CXX       =  g++-4.8
 QMAKE_CXXFLAGS  = -std=c++11
-INCLUDEPATH     = -I/usr/local/include
-LIBS            = -L/usr/local/lib -lm -lopencv_core -lopencv_highgui -lopencv_objdetect -lopencv_imgproc
+INCLUDEPATH    += -I/usr/local/include
+LIBS           += -L/usr/local/lib -lm -lopencv_core -lopencv_highgui -lopencv_objdetect -lopencv_imgproc
 
 QMAKE_CFLAGS_X86_64             -= -arch x86_64 -Xarch_x86_64 -mmacosx-version-min=10.5
 QMAKE_OBJECTIVE_CFLAGS_X86_64   -= -arch x86_64 -Xarch_x86_64 -mmacosx-version-min=10.5
@@ -24,16 +24,20 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = Blink
 TEMPLATE = app
 
-FORMS +=
+FORMS += \
+    MainWindow.ui
 
 HEADERS += \
-    MainWindow.h \
-    EyeTracker.h
+    EyeTracker.h \
+    Utilities.h \
+    FlashWidget.h \
+    MainWindow.h
 
 SOURCES += \
     main.cpp \
-    MainWindow.cpp \
-    EyeTracker.cpp
+    EyeTracker.cpp \
+    FlashWidget.cpp \
+    MainWindow.cpp
 
 OTHER_FILES += \
     ui.qml
