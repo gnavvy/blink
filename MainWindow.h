@@ -7,6 +7,8 @@
 #include <QTimer>
 #include <QWidget>
 #include <QThread>
+#include <QMutex>
+#include <QWaitCondition>
 #include <QDateTime>
 #include <QMainWindow>
 #include <QTextStream>
@@ -32,13 +34,17 @@ public slots:
     void outputLog(const QString &msg);
     void log(QString msg) { qDebug() << msg; }
     void stimulate();
-    void updateCounter();
+    void updateTimer();
+
+protected:
+//    void closeEvent(QCloseEvent *event);
 
 private:
     Ui::MainWindow *ui_;
     FlashWidget *pFlashWidget_;
 
     QTimer *pTimer_;
+    QDateTime startTime_;
 
     EyeTracker *pTracker_;
     QThread *pTrackerThread_;
@@ -47,10 +53,14 @@ private:
     void setupTimer();
     void setupWorker();
 
-    int  getInterval() { return 5; }
-    void resetCounter() { counter_ = 0; }
+    void start();
+    void end();
 
-    int counter_ = 0;
+    int  getInterval() { return 5; }
+    void resetTimer() { timerCounter_ = 0; }
+
+    int blinkCounter_ = 0;
+    int timerCounter_ = 0;
 };
 
 #endif // MAINWINDOW_H
