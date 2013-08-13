@@ -16,10 +16,12 @@
 
 #include "Utilities.h"
 #include "EyeTracker.h"
+#include "TaskImage1.h"
 #include "FlashWidget.h"
 
 namespace Ui {
     class MainWindow;
+    class TaskImage1;
 }
 
 class MainWindow : public QStackedWidget {
@@ -31,16 +33,14 @@ public:
     
 public slots:
     void onBlinkDetected();
-    void outputLog(const QString &msg);
-    void log(QString msg) { qDebug() << msg; }
+    void onButtonStartClicked() { start(); }
+    void onButtonEndClicked()   { end(); }
     void stimulate();
     void updateTimer();
-
-protected:
-//    void closeEvent(QCloseEvent *event);
+    void outputLog(const QString &msg);
 
 private:
-    Ui::MainWindow *ui_;
+    Ui::MainWindow *pMainWindow_;
     FlashWidget *pFlashWidget_;
 
     QTimer *pTimer_;
@@ -52,6 +52,7 @@ private:
     void setupUI();
     void setupTimer();
     void setupWorker();
+    void setupSignalSlots();
 
     void start();
     void end();

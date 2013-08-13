@@ -1,16 +1,15 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
 
-MainWindow::MainWindow(QWidget *parent) : QStackedWidget(parent), ui_(new Ui::MainWindow) {
+MainWindow::MainWindow(QWidget *parent) : QStackedWidget(parent), pMainWindow_(new Ui::MainWindow) {
     setupUI();
     setupTimer();
     setupWorker();
-    start();
+    setupSignalSlots();
 }
 
 MainWindow::~MainWindow() {
-    end();
-    delete ui_;
+    delete pMainWindow_;
     delete pFlashWidget_;
     delete pTimer_;
     delete pTracker_;
@@ -18,41 +17,44 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::setupUI() {
-    ui_->setupUi(this);
+    pMainWindow_->setupUi(this);
     pFlashWidget_ = new FlashWidget();
 }
 
 void MainWindow::setupTimer() {
     pTimer_ = new QTimer(this);
     pTimer_->setInterval(1000);
-    connect(pTimer_, SIGNAL(timeout()), this, SLOT(updateTimer()));
-    pTimer_->start();
 }
 
 void MainWindow::setupWorker() {
     pTrackerThread_ = new QThread;
     pTracker_ = new EyeTracker;
     pTracker_->moveToThread(pTrackerThread_);
+}
 
+void MainWindow::setupSignalSlots() {
+    connect(pTimer_, SIGNAL(timeout()), this, SLOT(updateTimer()));
     connect(pTracker_, SIGNAL(blinkDetected()), this, SLOT(onBlinkDetected()));
     connect(pTrackerThread_, SIGNAL(started()), pTracker_, SLOT(Start()));
+    connect(pMainWindow_->buttonStart, SIGNAL(clicked()), this, SLOT(onButtonStartClicked()));
+    connect(pMainWindow_->buttonEnd, SIGNAL(clicked()), this, SLOT(onButtonEndClicked()));
 }
 
 void MainWindow::start() {
     blinkCounter_ = 0;
     startTime_ = QDateTime::currentDateTime();
 
+    pTimer_->start();
     pTrackerThread_->start();
     outputLog(" |----------------------| ");
 }
 
 void MainWindow::end() {
+    pTimer_->stop();
     pTracker_->StopTracking();
 
-    int timeSpan = startTime_.secsTo(QDateTime::currentDateTime());
-    float blinkRate = static_cast<float>(blinkCounter_) * 60 / timeSpan;
+    float blinkRate = static_cast<float>(blinkCounter_) * 60 / startTime_.secsTo(QDateTime::currentDateTime());
     outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
-
     outputLog(" |----------------------| ");
 }
 

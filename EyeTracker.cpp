@@ -15,9 +15,7 @@ void EyeTracker::run() {
     if (capture_) {
         while (tracking) {
             frame_ = cvQueryFrame(capture_);
-            if (frame_.empty()) {
-                continue;
-            }
+            if (frame_.empty()) { continue; }
 
             cv::cvtColor(frame_, frame_, CV_BGR2GRAY);
             cv::flip(frame_, frame_, 1);

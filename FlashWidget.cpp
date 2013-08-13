@@ -12,8 +12,7 @@ FlashWidget::FlashWidget(QWidget *parent) : QWidget(parent) {
 FlashWidget::~FlashWidget() { }
 
 void FlashWidget::Flash() {
-//    pView_->showFullScreen();
-    pView_->show();
+    pView_->showFullScreen();
     pView_->raise();
     Sleeper::usleep(10);
     pView_->hide();

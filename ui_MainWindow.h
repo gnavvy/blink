@@ -14,6 +14,7 @@
 #include <QtGui/QApplication>
 #include <QtGui/QButtonGroup>
 #include <QtGui/QHeaderView>
+#include <QtGui/QPushButton>
 #include <QtGui/QStackedWidget>
 #include <QtGui/QWidget>
 
@@ -22,22 +23,37 @@ QT_BEGIN_NAMESPACE
 class Ui_MainWindow
 {
 public:
-    QWidget *page;
-    QWidget *page1;
+    QWidget *pagePortal;
+    QPushButton *buttonStart;
+    QPushButton *buttonEnd;
+    QWidget *widget;
+    QWidget *pageContent;
 
     void setupUi(QStackedWidget *MainWindow)
     {
         if (MainWindow->objectName().isEmpty())
             MainWindow->setObjectName(QString::fromUtf8("MainWindow"));
-        MainWindow->resize(640, 480);
-        page = new QWidget();
-        page->setObjectName(QString::fromUtf8("page"));
-        MainWindow->addWidget(page);
-        page1 = new QWidget();
-        page1->setObjectName(QString::fromUtf8("page1"));
-        MainWindow->addWidget(page1);
+        MainWindow->resize(1440, 800);
+        pagePortal = new QWidget();
+        pagePortal->setObjectName(QString::fromUtf8("pagePortal"));
+        buttonStart = new QPushButton(pagePortal);
+        buttonStart->setObjectName(QString::fromUtf8("buttonStart"));
+        buttonStart->setGeometry(QRect(20, 10, 114, 32));
+        buttonEnd = new QPushButton(pagePortal);
+        buttonEnd->setObjectName(QString::fromUtf8("buttonEnd"));
+        buttonEnd->setGeometry(QRect(20, 40, 114, 32));
+        widget = new QWidget(pagePortal);
+        widget->setObjectName(QString::fromUtf8("widget"));
+        widget->setGeometry(QRect(440, 500, 120, 80));
+        MainWindow->addWidget(pagePortal);
+        pageContent = new QWidget();
+        pageContent->setObjectName(QString::fromUtf8("pageContent"));
+        MainWindow->addWidget(pageContent);
 
         retranslateUi(MainWindow);
+
+        MainWindow->setCurrentIndex(0);
+
 
         QMetaObject::connectSlotsByName(MainWindow);
     } // setupUi
@@ -45,6 +61,8 @@ public:
     void retranslateUi(QStackedWidget *MainWindow)
     {
         MainWindow->setWindowTitle(QApplication::translate("MainWindow", "StackedWidget", 0, QApplication::UnicodeUTF8));
+        buttonStart->setText(QApplication::translate("MainWindow", "Start", 0, QApplication::UnicodeUTF8));
+        buttonEnd->setText(QApplication::translate("MainWindow", "End", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };

@@ -17,27 +17,35 @@ QMAKE_LFLAGS_X86_64             -= -arch x86_64 -Xarch_x86_64 -mmacosx-version-m
 QMAKE_LINK       = $$QMAKE_CXX
 QMAKE_LINK_SHLIB = $$QMAKE_CXX
 
-QT += core gui declarative
-
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+QT += core gui widgets declarative phonon
 
 TARGET = Blink
 TEMPLATE = app
 
 FORMS += \
-    MainWindow.ui
+    MainWindow.ui \
+    TaskImage1.ui \
+    TaskImage2.ui
 
 HEADERS += \
     EyeTracker.h \
     Utilities.h \
     FlashWidget.h \
-    MainWindow.h
+    MainWindow.h \
+    TaskImage1.h \
+    MainStackWidget.h \
+    TaskImage2.h \
+    TaskVideo.h
 
 SOURCES += \
     main.cpp \
     EyeTracker.cpp \
     FlashWidget.cpp \
-    MainWindow.cpp
+    MainWindow.cpp \
+    TaskImage1.cpp \
+    MainStackWidget.cpp \
+    TaskImage2.cpp \
+    TaskVideo.cpp
 
 OTHER_FILES += \
     ui.qml

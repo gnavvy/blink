@@ -1,5 +1,9 @@
 <RCC>
     <qresource prefix="/">
         <file>ui.qml</file>
+        <file>imgs/task_image_1.png</file>
+        <file>imgs/task_image_2.png</file>
+        <file>imgs/task_image_3.jpg</file>
+        <file>imgs/task_image_4.jpg</file>
     </qresource>
 </RCC>
