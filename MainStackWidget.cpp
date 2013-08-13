@@ -14,15 +14,17 @@ MainStackWidget::~MainStackWidget() {
 void MainStackWidget::setupUI() {
     this->resize(1440, 800);
 
+    taskText_   = new TaskText;
     taskImage1_ = new TaskImage1;
     taskImage2_ = new TaskImage2;
     taskVideo_  = new TaskVideo;
 
+    this->addWidget(taskText_);
     this->addWidget(taskImage1_);
     this->addWidget(taskImage2_);
     this->addWidget(taskVideo_);
 
-    this->setCurrentWidget(taskVideo_);
+    this->setCurrentWidget(taskText_);
 }
 
 void MainStackWidget::setupConnects() {

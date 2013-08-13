@@ -5,7 +5,7 @@ MainWindow::MainWindow(QWidget *parent) : QStackedWidget(parent), pMainWindow_(n
     setupUI();
     setupTimer();
     setupWorker();
-    setupSignalSlots();
+    setupConnects();
 }
 
 MainWindow::~MainWindow() {
@@ -32,7 +32,7 @@ void MainWindow::setupWorker() {
     pTracker_->moveToThread(pTrackerThread_);
 }
 
-void MainWindow::setupSignalSlots() {
+void MainWindow::setupConnects() {
     connect(pTimer_, SIGNAL(timeout()), this, SLOT(updateTimer()));
     connect(pTracker_, SIGNAL(blinkDetected()), this, SLOT(onBlinkDetected()));
     connect(pTrackerThread_, SIGNAL(started()), pTracker_, SLOT(Start()));

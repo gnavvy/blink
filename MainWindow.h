@@ -52,7 +52,7 @@ private:
     void setupUI();
     void setupTimer();
     void setupWorker();
-    void setupSignalSlots();
+    void setupConnects();
 
     void start();
     void end();

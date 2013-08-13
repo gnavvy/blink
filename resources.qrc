@@ -5,5 +5,6 @@
         <file>imgs/task_image_2.png</file>
         <file>imgs/task_image_3.jpg</file>
         <file>imgs/task_image_4.jpg</file>
+        <file>imgs/task_text_1.png</file>
     </qresource>
 </RCC>

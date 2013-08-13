@@ -35,7 +35,8 @@ HEADERS += \
     TaskImage1.h \
     MainStackWidget.h \
     TaskImage2.h \
-    TaskVideo.h
+    TaskVideo.h \
+    TaskText.h
 
 SOURCES += \
     main.cpp \
@@ -45,7 +46,8 @@ SOURCES += \
     TaskImage1.cpp \
     MainStackWidget.cpp \
     TaskImage2.cpp \
-    TaskVideo.cpp
+    TaskVideo.cpp \
+    TaskText.cpp
 
 OTHER_FILES += \
     ui.qml
