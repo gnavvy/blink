@@ -1,7 +1,11 @@
 #ifndef UTILITIES_H
 #define UTILITIES_H
 
+#include <QFile>
 #include <QThread>
+#include <QString>
+#include <QDateTime>
+#include <QTextStream>
 
 class Sleeper : public QThread {
 public:

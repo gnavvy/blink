@@ -37,8 +37,8 @@ private:
 
     cv::CascadeClassifier faceCascade;
     cv::CascadeClassifier eyesCascade;
-    CvCapture *capture_;
-    cv::Mat frame_;
+    CvCapture *capture;
+    cv::Mat frame;
 
     int numEyesCurr = 0;
     int numEyesPrev = 0;
@@ -48,7 +48,6 @@ private:
 
     void msleep(int ms);
     void detectAndDisplay(cv::Mat& frame);
-
 };
 
 #endif // EYETRACKER_H

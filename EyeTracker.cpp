@@ -8,22 +8,24 @@ EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {
     tracking = true;
 }
 
-EyeTracker::~EyeTracker() {}
+EyeTracker::~EyeTracker() {
+    StopTracking();
+}
 
 void EyeTracker::run() {
-    capture_ = cvCaptureFromCAM(-1);  // use default camera
-    if (capture_) {
+    capture = cvCaptureFromCAM(-1);  // use default camera
+    if (capture) {
         while (tracking) {
-            frame_ = cvQueryFrame(capture_);
-            if (frame_.empty()) { continue; }
+            frame = cvQueryFrame(capture);
+            if (frame.empty()) { continue; }
 
-            cv::cvtColor(frame_, frame_, CV_BGR2GRAY);
-            cv::flip(frame_, frame_, 1);
-            detectAndDisplay(frame_);
+            cv::cvtColor(frame, frame, CV_BGR2GRAY);
+            cv::flip(frame, frame, 1);
+            detectAndDisplay(frame);
 
-            msleep(30);
+            msleep(1000/30);
         }
-        cvReleaseCapture(&capture_);
+        cvReleaseCapture(&capture);
     }
     emit finished();
 }
