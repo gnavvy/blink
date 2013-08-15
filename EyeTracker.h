@@ -32,8 +32,8 @@ private:
     const int kMinFace = 300;
     const int kMinEyes = 100;
     const std::string kWindowTitle = "Capture - Face detection";
-    const std::string kFaceCascadePath = "../../../res/haarcascade_frontalface_alt.xml";
-    const std::string kEyesCascadePath = "../../../res/haarcascade_eye_tree_eyeglasses.xml";
+    const std::string kFaceCascadePath = "./res/haarcascade_frontalface_alt.xml";
+    const std::string kEyesCascadePath = "./res/haarcascade_eye_tree_eyeglasses.xml";
 
     cv::CascadeClassifier faceCascade;
     cv::CascadeClassifier eyesCascade;

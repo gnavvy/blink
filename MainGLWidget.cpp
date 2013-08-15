@@ -43,7 +43,7 @@ void MainGLWidget::paintGL() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-    if (toStimulate) { return; }
+    if (toFlash) { return; }
 
     glEnable(GL_TEXTURE_2D);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width(), img.height(), GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
@@ -54,6 +54,7 @@ void MainGLWidget::paintGL() {
     glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
     glEnd();
     glFlush();
+
     glFinish();
     glDisable(GL_TEXTURE_2D);
 }
@@ -107,8 +108,8 @@ void MainGLWidget::stop() {
 
 // -------- slots -------- //
 void MainGLWidget::onFatigueTimerTimeOut() {
-    toStimulate = !toStimulate;
-    pFatigueTimer->start(toStimulate ? 1000/60 : FATIGUE_LIMIT);
+    toFlash = !toFlash;
+    pFatigueTimer->start(toFlash ? 1000/60 : FATIGUE_LIMIT);
     outputLog(" stimulated ");
     update();
 }
@@ -120,7 +121,7 @@ void MainGLWidget::onBlinkDectected() {
 }
 
 void MainGLWidget::outputLog(const QString &msg) {
-    QString fileName = QString("../../../log/").append(timestamp.toString()).append(".txt");
+    QString fileName = QString("./log/").append(timestamp.toString()).append(".txt");
     QFile logFile(fileName);
     if (logFile.open(QFile::ReadWrite|QFile::Append|QFile::Text)) {
         QTextStream outStream(&logFile);

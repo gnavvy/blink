@@ -4,7 +4,7 @@
 #include <QWidget>
 #include <QGridLayout>
 #include <QPushButton>
-#include <phonon/VideoPlayer>
+//#include <phonon/VideoPlayer>
 
 class TaskVideo : public QWidget {
     Q_OBJECT
@@ -22,7 +22,7 @@ private:
     QPushButton *startButton1_;
     QPushButton *startButton2_;
 
-    Phonon::VideoPlayer *videoPlayer_;
+//    Phonon::VideoPlayer *videoPlayer_;
 };
 
 #endif // TASKVIDEO_H

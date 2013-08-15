@@ -29,7 +29,8 @@ private:
     // ---- member ---- //
     const int   FATIGUE_LIMIT = 5000;  // 5s
 
-    bool        toStimulate = false;
+    bool        toFlash = false;
+    bool        toBlur  = false;
     QImage      img;
     QTimer     *pFatigueTimer;
     QDateTime   timestamp;
