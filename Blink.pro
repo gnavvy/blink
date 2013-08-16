@@ -50,8 +50,8 @@ SOURCES += \
     MainGLWidget.cpp
 
 OTHER_FILES += \
-    blur.vert \
-    blur.frag
+    blur.frag \
+    blur.vert
 
 RESOURCES += \
     resources.qrc

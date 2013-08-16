@@ -10,9 +10,8 @@ MainGLWidget::~MainGLWidget() {
     if (pFatigueTimer)  delete pFatigueTimer;
     if (texture)        delete texture;
     if (fboScene)       delete fboScene;
-    if (fboVBlur)       delete fboVBlur;
-    if (fboHBlur)       delete fboHBlur;
-    if (shaderProgram)  delete shaderProgram;
+    if (fboBlur)        delete fboBlur;
+    if (blurShader)     delete blurShader;
     if (vertShader)     delete vertShader;
     if (fragShader)     delete fragShader;
 }
@@ -34,13 +33,13 @@ void MainGLWidget::setupFatigueTimer() {
 }
 
 void MainGLWidget::setupShader(const QString &vshader, const QString &fshader) {
-    shaderProgram = new QGLShaderProgram;
+    blurShader = new QGLShaderProgram;
 
     QFileInfo vsh(vshader);
     if (vsh.exists()) {
         vertShader = new QGLShader(QGLShader::Vertex);
         if (vertShader->compileSourceFile(vshader)) {
-            shaderProgram->addShader(vertShader);
+            blurShader->addShader(vertShader);
         }
     }
 
@@ -48,12 +47,11 @@ void MainGLWidget::setupShader(const QString &vshader, const QString &fshader) {
     if (fsh.exists()) {
         fragShader = new QGLShader(QGLShader::Fragment);
         if (fragShader->compileSourceFile(fshader)) {
-            shaderProgram->addShader(fragShader);
+            blurShader->addShader(fragShader);
         }
     }
 
-    shaderProgram->link();
-//    shaderProgram->bind();
+    blurShader->link();
 }
 
 void MainGLWidget::setupGLTextures() {
@@ -75,8 +73,7 @@ void MainGLWidget::setupGLTextures() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     fboScene = new QGLFramebufferObject(img.width(), img.height());
-    fboHBlur = new QGLFramebufferObject(128, 128);
-    fboVBlur = new QGLFramebufferObject(128, 128);
+    fboBlur = new QGLFramebufferObject(img.width(), img.height());
 }
 
 void MainGLWidget::initializeGL() {
@@ -93,60 +90,35 @@ void MainGLWidget::initializeGL() {
 }
 
 void MainGLWidget::paintGL() {
+    glViewport(0, 0, fboScene->width(), fboScene->height());
+
+    // render to fbo
     fboScene->bind(); {
-        glViewport(0, 0, fboScene->width(), fboScene->height());
-
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-        if (toFlash) { return; }
-
-        renderWithTexture(texture[0]);
-
-        glViewport(0, 0, width(), height());
+        renderFromTexture(texture[0]);
     } fboScene->release();
 
-//    shaderProgram->setUniformValue("tex0", fboScene->texture());
-//    shaderProgram->setUniformValue("offset", 1.0f/fboHBlur->width(), 0);
-//    shaderProgram->setUniformValue("attenuation", 2.5f);
+    if (toBlur) {
+        blurShader->bind();
+        blurShader->setUniformValue("tex0", fboScene->texture());
+        blurShader->setUniformValue("radius", 1.0f);
 
-//    glViewport(0, 0, fboHBlur->width(), fboHBlur->height());
-//    fboHBlur->bind(); {
-//        glEnable(GL_TEXTURE_2D);
-//        glBindTexture(GL_TEXTURE_2D, texture[0]);
-//        glBegin(GL_QUADS);
-//            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,-1.0f);
-//            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0f,-1.0f);
-//            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0f, 1.0f);
-//            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
-//        glEnd();
-//        glFlush();
-//        glFinish();
-//        glDisable(GL_TEXTURE_2D);
-//    } fboHBlur->release();
+        // blur horizontally
+        blurShader->setUniformValue("offset", 1.0f/fboScene->width(), 0.0f);
+        fboBlur->bind(); {
+            renderFromTexture(fboScene->texture());
+        } fboBlur->release();
 
-//    shaderProgram->setUniformValue("offset", 1.0f/fboVBlur->height(), 0);
-//    shaderProgram->setUniformValue("attenuation", 2.5f);
+        // blur vertically
+        blurShader->setUniformValue("offset", 0.0f, 1.0f/fboScene->height());
+        fboScene->bind(); {
+            renderFromTexture(fboBlur->texture());
+        } fboScene->release();
 
-//    glViewport(0, 0, fboVBlur->width(), fboVBlur->height());
-//    fboHBlur->bind(); {
-//        glEnable(GL_TEXTURE_2D);
-//        glBindTexture(GL_TEXTURE_2D, texture[0]);
-//        glBegin(GL_QUADS);
-//            glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,-1.0f);
-//            glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0f,-1.0f);
-//            glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0f, 1.0f);
-//            glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
-//        glEnd();
-//        glFlush();
-//        glFinish();
-//        glDisable(GL_TEXTURE_2D);
-//    } fboHBlur->release();
+        blurShader->release();
+    }
 
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-    renderWithTexture(fboScene->texture());
+    // render to screen
+    renderFromTexture(fboScene->texture());
 }
 
 void MainGLWidget::resizeGL(int w, int h) {
@@ -156,12 +128,17 @@ void MainGLWidget::resizeGL(int w, int h) {
 void MainGLWidget::keyPressEvent(QKeyEvent *event) {
     switch(event->key()) {
         case Qt::Key_Escape: stop(); break;
+        case Qt::Key_S: debug(); break;
         default: event->ignore(); break;
     }
 }
 
-void MainGLWidget::renderWithTexture(GLuint tex) {
-//    glEnable(GL_TEXTURE_2D);
+void MainGLWidget::renderFromTexture(GLuint tex) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+//    if (toFlash) { return; }
+
     glBindTexture(GL_TEXTURE_2D, tex);
     glBegin(GL_QUADS);
         glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,-1.0f);
@@ -170,7 +147,6 @@ void MainGLWidget::renderWithTexture(GLuint tex) {
         glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
     glEnd();
     glFlush();
-//    glDisable(GL_TEXTURE_2D);
 }
 
 void MainGLWidget::start() {
@@ -188,6 +164,11 @@ void MainGLWidget::stop() {
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(QDateTime::currentDateTime());
     outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
     outputLog(" |----------------------| ");
+}
+
+void MainGLWidget::debug() {
+    fboScene->toImage().save("fboScene.png", "PNG");
+    fboBlur->toImage().save("fboBlur.png", "PNG");
 }
 
 // -------- slots -------- //

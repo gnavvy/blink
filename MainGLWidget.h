@@ -3,10 +3,10 @@
 
 #include <QTimer>
 #include <QtOpenGL>
-#include <QGLWidget>
 #include <QDateTime>
+#include <QGLWidget>
 #include <QGLShader>
-#include <QDebug>
+#include <QGLFunctions>
 #include "EyeTracker.h"
 
 class MainGLWidget : public QGLWidget {
@@ -30,18 +30,20 @@ protected:
 private:
     // ---- member ---- //
     const int   FATIGUE_LIMIT = 5000;  // 5s
+    const int   BLUR_SIZE = 512;
 
     bool        toFlash = false;
-    bool        toBlur  = false;
+    bool        toBlur  = true;
     QImage      img;
     QTimer     *pFatigueTimer;
     QDateTime   timestamp;
 
+    // opengl
+    GLuint *texture = new GLuint[2];
     QGLFramebufferObject *fboScene;
-    QGLFramebufferObject *fboVBlur;
-    QGLFramebufferObject *fboHBlur;
-
-    QGLShaderProgram *shaderProgram;
+    QGLFramebufferObject *fboBlurV;
+    QGLFramebufferObject *fboBlur;
+    QGLShaderProgram *blurShader;
     QGLShader *vertShader;
     QGLShader *fragShader;
 
@@ -49,9 +51,6 @@ private:
     EyeTracker *pTracker;
     QThread    *pTrackerThread;
     int         blinkCounter = 0;
-
-    // opengl
-    GLuint *texture = new GLuint[2];
 
     // ---- function ---- //
     void setupFatigueTimer();
@@ -61,8 +60,9 @@ private:
 
     void start();
     void stop();
+    void debug();
 
-    void renderWithTexture(GLuint tex);
+    void renderFromTexture(GLuint tex);
 
     void outputLog(const QString &msg);
 };
