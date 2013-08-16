@@ -6,10 +6,11 @@
 
 QMAKE_CXX       =  g++-4.8
 QMAKE_CXXFLAGS  = -std=c++11
-INCLUDEPATH    += -I/usr/local/include
+INCLUDEPATH    += /usr/local/include
+INCLUDEPATH    += /usr/local/opt/qt5/include
 LIBS           += -L/usr/local/lib
+LIBS           += -L/usr/local/opt/qt5/lib
 LIBS           += -lm -lopencv_core -lopencv_highgui -lopencv_objdetect -lopencv_imgproc
-#LIBS           += -lGL -lGLU -lGLEW
 
 QMAKE_CFLAGS_X86_64             -= -arch x86_64 -Xarch_x86_64 -mmacosx-version-min=10.5
 QMAKE_OBJECTIVE_CFLAGS_X86_64   -= -arch x86_64 -Xarch_x86_64 -mmacosx-version-min=10.5
@@ -19,7 +20,7 @@ QMAKE_LFLAGS_X86_64             -= -arch x86_64 -Xarch_x86_64 -mmacosx-version-m
 QMAKE_LINK       = $$QMAKE_CXX
 QMAKE_LINK_SHLIB = $$QMAKE_CXX
 
-QT += core gui opengl widgets declarative phonon
+QT += core gui opengl widgets
 
 TARGET = Blink
 TEMPLATE = app
@@ -48,7 +49,9 @@ SOURCES += \
     TaskText.cpp \
     MainGLWidget.cpp
 
-OTHER_FILES +=
+OTHER_FILES += \
+    blur.frag \
+    blur.vert
 
 RESOURCES += \
     resources.qrc

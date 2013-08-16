@@ -3,12 +3,17 @@
 MainGLWidget::MainGLWidget(QWidget *parent) : QGLWidget(parent) {
     setupEyeTracker();
     setupFatigueTimer();
-    start();
+//    start();
 }
 
 MainGLWidget::~MainGLWidget() {
-    delete pFatigueTimer;
-    delete texture;
+    if (pFatigueTimer)  delete pFatigueTimer;
+    if (texture)        delete texture;
+    if (fboScene)       delete fboScene;
+    if (fboBlur)        delete fboBlur;
+    if (blurShader)     delete blurShader;
+    if (vertShader)     delete vertShader;
+    if (fragShader)     delete fragShader;
 }
 
 void MainGLWidget::setupEyeTracker() {
@@ -27,46 +32,26 @@ void MainGLWidget::setupFatigueTimer() {
     connect(pFatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
 }
 
-void MainGLWidget::initializeGL() {
-    setupGLTextures();
+void MainGLWidget::setupShader(const QString &vshader, const QString &fshader) {
+    blurShader = new QGLShaderProgram;
 
-    glEnable(GL_TEXTURE_2D);
-    glEnable(GL_DEPTH_TEST);
-    glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-}
-
-void MainGLWidget::paintGL() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
-    if (toStimulate) { return; }
-
-    glEnable(GL_TEXTURE_2D);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width(), img.height(), GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
-    glBegin(GL_QUADS);
-    glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,-1.0f);
-    glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0f,-1.0f);
-    glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0f, 1.0f);
-    glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
-    glEnd();
-    glFlush();
-    glFinish();
-    glDisable(GL_TEXTURE_2D);
-}
-
-void MainGLWidget::resizeGL(int w, int h) {
-    glViewport(0, 0, w, h);
-}
-
-void MainGLWidget::keyPressEvent(QKeyEvent *event) {
-    switch(event->key()) {
-        case Qt::Key_Escape: stop(); break;
-        default: event->ignore(); break;
+    QFileInfo vsh(vshader);
+    if (vsh.exists()) {
+        vertShader = new QGLShader(QGLShader::Vertex);
+        if (vertShader->compileSourceFile(vshader)) {
+            blurShader->addShader(vertShader);
+        }
     }
+
+    QFileInfo fsh(fshader);
+    if (fsh.exists()) {
+        fragShader = new QGLShader(QGLShader::Fragment);
+        if (fragShader->compileSourceFile(fshader)) {
+            blurShader->addShader(fragShader);
+        }
+    }
+
+    blurShader->link();
 }
 
 void MainGLWidget::setupGLTextures() {
@@ -81,11 +66,87 @@ void MainGLWidget::setupGLTextures() {
         exit(EXIT_FAILURE);
     }
 
-    glGenTextures(1, texture);
+    glGenTextures(2, texture);
     glBindTexture(GL_TEXTURE_2D, texture[0]);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(), img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    fboScene = new QGLFramebufferObject(img.width(), img.height());
+    fboBlur = new QGLFramebufferObject(img.width(), img.height());
+}
+
+void MainGLWidget::initializeGL() {
+    setupGLTextures();
+    setupShader(":/blur.vert", ":/blur.frag");
+
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+}
+
+void MainGLWidget::paintGL() {
+    glViewport(0, 0, fboScene->width(), fboScene->height());
+
+    // render to fbo
+    fboScene->bind(); {
+        renderFromTexture(texture[0]);
+    } fboScene->release();
+
+    if (toBlur) {
+        blurShader->bind();
+        blurShader->setUniformValue("tex0", fboScene->texture());
+        blurShader->setUniformValue("radius", 1.0f);
+
+        // blur horizontally
+        blurShader->setUniformValue("offset", 1.0f/fboScene->width(), 0.0f);
+        fboBlur->bind(); {
+            renderFromTexture(fboScene->texture());
+        } fboBlur->release();
+
+        // blur vertically
+        blurShader->setUniformValue("offset", 0.0f, 1.0f/fboScene->height());
+        fboScene->bind(); {
+            renderFromTexture(fboBlur->texture());
+        } fboScene->release();
+
+        blurShader->release();
+    }
+
+    // render to screen
+    renderFromTexture(fboScene->texture());
+}
+
+void MainGLWidget::resizeGL(int w, int h) {
+    glViewport(0, 0, w, h);
+}
+
+void MainGLWidget::keyPressEvent(QKeyEvent *event) {
+    switch(event->key()) {
+        case Qt::Key_Escape: stop(); break;
+        case Qt::Key_S: debug(); break;
+        default: event->ignore(); break;
+    }
+}
+
+void MainGLWidget::renderFromTexture(GLuint tex) {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+//    if (toFlash) { return; }
+
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glBegin(GL_QUADS);
+        glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,-1.0f);
+        glTexCoord2f(1.0f, 0.0f); glVertex2f( 1.0f,-1.0f);
+        glTexCoord2f(1.0f, 1.0f); glVertex2f( 1.0f, 1.0f);
+        glTexCoord2f(0.0f, 1.0f); glVertex2f(-1.0f, 1.0f);
+    glEnd();
+    glFlush();
 }
 
 void MainGLWidget::start() {
@@ -105,10 +166,15 @@ void MainGLWidget::stop() {
     outputLog(" |----------------------| ");
 }
 
+void MainGLWidget::debug() {
+    fboScene->toImage().save("fboScene.png", "PNG");
+    fboBlur->toImage().save("fboBlur.png", "PNG");
+}
+
 // -------- slots -------- //
 void MainGLWidget::onFatigueTimerTimeOut() {
-    toStimulate = !toStimulate;
-    pFatigueTimer->start(toStimulate ? 1000/60 : FATIGUE_LIMIT);
+    toFlash = !toFlash;
+    pFatigueTimer->start(toFlash ? 1000/60 : FATIGUE_LIMIT);
     outputLog(" stimulated ");
     update();
 }
@@ -120,7 +186,7 @@ void MainGLWidget::onBlinkDectected() {
 }
 
 void MainGLWidget::outputLog(const QString &msg) {
-    QString fileName = QString("../../../log/").append(timestamp.toString()).append(".txt");
+    QString fileName = QString("./log/").append(timestamp.toString()).append(".txt");
     QFile logFile(fileName);
     if (logFile.open(QFile::ReadWrite|QFile::Append|QFile::Text)) {
         QTextStream outStream(&logFile);
