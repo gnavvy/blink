@@ -5,6 +5,8 @@
 #include <QtOpenGL>
 #include <QGLWidget>
 #include <QDateTime>
+#include <QGLShader>
+#include <QDebug>
 #include "EyeTracker.h"
 
 class MainGLWidget : public QGLWidget {
@@ -35,6 +37,14 @@ private:
     QTimer     *pFatigueTimer;
     QDateTime   timestamp;
 
+    QGLFramebufferObject *fboScene;
+    QGLFramebufferObject *fboVBlur;
+    QGLFramebufferObject *fboHBlur;
+
+    QGLShaderProgram *shaderProgram;
+    QGLShader *vertShader;
+    QGLShader *fragShader;
+
     // blink detection
     EyeTracker *pTracker;
     QThread    *pTrackerThread;
@@ -47,9 +57,12 @@ private:
     void setupFatigueTimer();
     void setupEyeTracker();
     void setupGLTextures();
+    void setupShader(const QString &vshader, const QString &fshader);
 
     void start();
     void stop();
+
+    void renderWithTexture(GLuint tex);
 
     void outputLog(const QString &msg);
 };

@@ -49,7 +49,9 @@ SOURCES += \
     TaskText.cpp \
     MainGLWidget.cpp
 
-OTHER_FILES +=
+OTHER_FILES += \
+    blur.vert \
+    blur.frag
 
 RESOURCES += \
     resources.qrc

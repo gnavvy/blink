@@ -6,5 +6,7 @@
         <file>imgs/task_image_4.jpg</file>
         <file>imgs/task_text_1.png</file>
         <file>imgs/bg.png</file>
+        <file>blur.frag</file>
+        <file>blur.vert</file>
     </qresource>
 </RCC>
