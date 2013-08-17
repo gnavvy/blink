@@ -19,6 +19,7 @@ signals:
     
 public slots:
     void onFatigueTimerTimeOut();
+    void onBlurTimerTimeOut();
     void onBlinkDectected();
 
 protected:
@@ -29,13 +30,15 @@ protected:
 
 private:
     // ---- member ---- //
-    const int   FATIGUE_LIMIT = 5000;  // 5s
+    const int   FATIGUE_LIMIT = 3000;  // 5s
     const int   BLUR_SIZE = 512;
 
     bool        toFlash = false;
+    bool        flashing = false;
     bool        toBlur  = true;
     QImage      img;
-    QTimer     *pFatigueTimer;
+    QTimer     *fatigueTimer;
+    QTimer     *blurTimer;
     QDateTime   timestamp;
 
     // opengl
@@ -51,9 +54,10 @@ private:
     EyeTracker *pTracker;
     QThread    *pTrackerThread;
     int         blinkCounter = 0;
+    float       blurRadius = 0.0f;
 
     // ---- function ---- //
-    void setupFatigueTimer();
+    void setupTimers();
     void setupEyeTracker();
     void setupGLTextures();
     void setupShader(const QString &vshader, const QString &fshader);

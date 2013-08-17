@@ -2,12 +2,13 @@
 
 MainGLWidget::MainGLWidget(QWidget *parent) : QGLWidget(parent) {
     setupEyeTracker();
-    setupFatigueTimer();
-//    start();
+    setupTimers();
+    start();
 }
 
 MainGLWidget::~MainGLWidget() {
-    if (pFatigueTimer)  delete pFatigueTimer;
+    if (fatigueTimer)   delete fatigueTimer;
+    if (blurTimer)      delete blurTimer;
     if (texture)        delete texture;
     if (fboScene)       delete fboScene;
     if (fboBlur)        delete fboBlur;
@@ -27,9 +28,12 @@ void MainGLWidget::setupEyeTracker() {
     connect(pTrackerThread, SIGNAL(finished()), pTrackerThread, SLOT(deleteLater()));
 }
 
-void MainGLWidget::setupFatigueTimer() {
-    pFatigueTimer = new QTimer(this);
-    connect(pFatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
+void MainGLWidget::setupTimers() {
+    fatigueTimer = new QTimer(this);
+    connect(fatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
+
+    blurTimer = new QTimer(this);
+    connect(blurTimer, SIGNAL(timeout()), this, SLOT(onBlurTimerTimeOut()));
 }
 
 void MainGLWidget::setupShader(const QString &vshader, const QString &fshader) {
@@ -90,9 +94,8 @@ void MainGLWidget::initializeGL() {
 }
 
 void MainGLWidget::paintGL() {
-    glViewport(0, 0, fboScene->width(), fboScene->height());
-
     // render to fbo
+    glViewport(0, 0, fboScene->width(), fboScene->height());
     fboScene->bind(); {
         renderFromTexture(texture[0]);
     } fboScene->release();
@@ -100,7 +103,7 @@ void MainGLWidget::paintGL() {
     if (toBlur) {
         blurShader->bind();
         blurShader->setUniformValue("tex0", fboScene->texture());
-        blurShader->setUniformValue("radius", 1.0f);
+        blurShader->setUniformValue("radius", blurRadius);
 
         // blur horizontally
         blurShader->setUniformValue("offset", 1.0f/fboScene->width(), 0.0f);
@@ -117,7 +120,10 @@ void MainGLWidget::paintGL() {
         blurShader->release();
     }
 
+//    if (flashing) { return; }
+
     // render to screen
+    glViewport(0, 0, width(), height());
     renderFromTexture(fboScene->texture());
 }
 
@@ -137,8 +143,6 @@ void MainGLWidget::renderFromTexture(GLuint tex) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-//    if (toFlash) { return; }
-
     glBindTexture(GL_TEXTURE_2D, tex);
     glBegin(GL_QUADS);
         glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,-1.0f);
@@ -152,14 +156,14 @@ void MainGLWidget::renderFromTexture(GLuint tex) {
 void MainGLWidget::start() {
     blinkCounter = 0;
     timestamp = QDateTime::currentDateTime();
-    pFatigueTimer->start(FATIGUE_LIMIT);
+    fatigueTimer->start(FATIGUE_LIMIT);
     pTrackerThread->start();
     outputLog(" |----------------------| ");
 }
 
 void MainGLWidget::stop() {
     pTracker->StopTracking();
-    pFatigueTimer->stop();
+    fatigueTimer->stop();
 
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(QDateTime::currentDateTime());
     outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
@@ -173,15 +177,32 @@ void MainGLWidget::debug() {
 
 // -------- slots -------- //
 void MainGLWidget::onFatigueTimerTimeOut() {
-    toFlash = !toFlash;
-    pFatigueTimer->start(toFlash ? 1000/60 : FATIGUE_LIMIT);
+    if (toFlash) {
+        flashing = !flashing;
+        fatigueTimer->start(flashing ? 1000/60 : FATIGUE_LIMIT);
+    }
+
+    if (toBlur) {
+        blurTimer->start(1000/60);
+        fatigueTimer->stop();
+    }
+
     outputLog(" stimulated ");
+    update();
+}
+
+void MainGLWidget::onBlurTimerTimeOut() {
+    blurRadius += 0.01f;
     update();
 }
 
 void MainGLWidget::onBlinkDectected() {
     blinkCounter++;
-    pFatigueTimer->start(FATIGUE_LIMIT);
+
+    blurRadius = 0.0f;
+    blurTimer->stop();
+
+    fatigueTimer->start(FATIGUE_LIMIT);
     outputLog(" blink detected ");
 }
 
