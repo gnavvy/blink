@@ -25,29 +25,14 @@ QT += core gui opengl widgets webkitwidgets
 TARGET = Blink
 TEMPLATE = app
 
-FORMS += \
-    TaskImage1.ui \
-    TaskImage2.ui
-
 HEADERS += \
     EyeTracker.h \
-    Utilities.h \
-    TaskImage1.h \
-    MainStackWidget.h \
-    TaskImage2.h \
-    TaskVideo.h \
-    TaskText.h \
     MainWidget.h \
     MaskView.h
 
 SOURCES += \
     main.cpp \
     EyeTracker.cpp \
-    TaskImage1.cpp \
-    MainStackWidget.cpp \
-    TaskImage2.cpp \
-    TaskVideo.cpp \
-    TaskText.cpp \
     MainWidget.cpp \
     MaskView.cpp
 
