@@ -1,14 +1,15 @@
-#include "MainGLWidget.h"
+#include "MaskView.h"
 
-MainGLWidget::MainGLWidget(QWidget *parent) : QGLWidget(parent) {
-    setupEyeTracker();
+MaskView::MaskView(QWidget *parent) : QGLWidget(parent) {
+    this->resize(WEB_VIEW_WIDTH, WEB_VIEW_HEIGHT);
     setupTimers();
-    start();
 }
 
-MainGLWidget::~MainGLWidget() {
-    if (fatigueTimer)   delete fatigueTimer;
+MaskView::~MaskView() {
     if (blurTimer)      delete blurTimer;
+    if (flashTimer)     delete flashTimer;
+    if (renderTimer)    delete renderTimer;
+
     if (texture)        delete texture;
     if (fboScene)       delete fboScene;
     if (fboBlur)        delete fboBlur;
@@ -17,26 +18,20 @@ MainGLWidget::~MainGLWidget() {
     if (fragShader)     delete fragShader;
 }
 
-void MainGLWidget::setupEyeTracker() {
-    pTrackerThread = new QThread;
-    pTracker       = new EyeTracker;
-    pTracker->moveToThread(pTrackerThread);
-    connect(pTrackerThread, SIGNAL(started()), pTracker, SLOT(Start()));
-    connect(pTracker, SIGNAL(blinkDetected()), this, SLOT(onBlinkDectected()));
-    connect(pTracker, SIGNAL(finished()), pTrackerThread, SLOT(quit()));
-    connect(pTrackerThread, SIGNAL(finished()), pTracker, SLOT(deleteLater()));
-    connect(pTrackerThread, SIGNAL(finished()), pTrackerThread, SLOT(deleteLater()));
-}
-
-void MainGLWidget::setupTimers() {
-    fatigueTimer = new QTimer(this);
-    connect(fatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
-
+void MaskView::setupTimers() {
     blurTimer = new QTimer(this);
     connect(blurTimer, SIGNAL(timeout()), this, SLOT(onBlurTimerTimeOut()));
+
+    flashTimer = new QTimer(this);
+    flashTimer->setInterval(1000/60);
+    connect(flashTimer, SIGNAL(timeout()), this, SLOT(onFlashTimerTimeOut()));
+
+    renderTimer = new QTimer(this);
+    renderTimer->setInterval(1000/FPS);
+    connect(renderTimer, SIGNAL(timeout()), this, SLOT(onRenderTimerTimeOut()));
 }
 
-void MainGLWidget::setupShader(const QString &vshader, const QString &fshader) {
+void MaskView::setupShader(const QString &vshader, const QString &fshader) {
     blurShader = new QGLShaderProgram;
 
     QFileInfo vsh(vshader);
@@ -58,7 +53,7 @@ void MainGLWidget::setupShader(const QString &vshader, const QString &fshader) {
     blurShader->link();
 }
 
-void MainGLWidget::setupGLTextures() {
+void MaskView::updateTexture() {
     if (!img.load(":/imgs/bg.png")) {
         qDebug() << "cannot load bg.png";
         exit(EXIT_FAILURE);
@@ -75,14 +70,15 @@ void MainGLWidget::setupGLTextures() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(), img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    fboScene = new QGLFramebufferObject(img.width(), img.height());
-    fboBlur = new QGLFramebufferObject(img.width(), img.height());
 }
 
-void MainGLWidget::initializeGL() {
-    setupGLTextures();
+void MaskView::initializeGL() {
+    updateTexture();
+
     setupShader(":/blur.vert", ":/blur.frag");
+
+    fboScene = new QGLFramebufferObject(WEB_VIEW_WIDTH, WEB_VIEW_HEIGHT);
+    fboBlur  = new QGLFramebufferObject(WEB_VIEW_WIDTH, WEB_VIEW_HEIGHT);
 
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
@@ -93,14 +89,23 @@ void MainGLWidget::initializeGL() {
     glLoadIdentity();
 }
 
-void MainGLWidget::paintGL() {
+void MaskView::paintGL() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    if (flashing) {
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        return;
+    } else {
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);   // transparent
+    }
+
     // render to fbo
     glViewport(0, 0, fboScene->width(), fboScene->height());
     fboScene->bind(); {
         renderFromTexture(texture[0]);
     } fboScene->release();
 
-    if (toBlur) {
+    if (blurring) {
         blurShader->bind();
         blurShader->setUniformValue("tex0", fboScene->texture());
         blurShader->setUniformValue("radius", blurRadius);
@@ -120,29 +125,25 @@ void MainGLWidget::paintGL() {
         blurShader->release();
     }
 
-//    if (flashing) { return; }
-
     // render to screen
     glViewport(0, 0, width(), height());
     renderFromTexture(fboScene->texture());
 }
 
-void MainGLWidget::resizeGL(int w, int h) {
+void MaskView::resizeGL(int w, int h) {
     glViewport(0, 0, w, h);
 }
 
-void MainGLWidget::keyPressEvent(QKeyEvent *event) {
+void MaskView::keyPressEvent(QKeyEvent *event) {
     switch(event->key()) {
-        case Qt::Key_Escape: stop(); break;
         case Qt::Key_S: debug(); break;
         default: event->ignore(); break;
     }
 }
 
-void MainGLWidget::renderFromTexture(GLuint tex) {
+void MaskView::renderFromTexture(GLuint tex) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-
     glBindTexture(GL_TEXTURE_2D, tex);
     glBegin(GL_QUADS);
         glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,-1.0f);
@@ -153,64 +154,37 @@ void MainGLWidget::renderFromTexture(GLuint tex) {
     glFlush();
 }
 
-void MainGLWidget::start() {
-    blinkCounter = 0;
-    timestamp = QDateTime::currentDateTime();
-    fatigueTimer->start(FATIGUE_LIMIT);
-    pTrackerThread->start();
-    outputLog(" |----------------------| ");
-}
-
-void MainGLWidget::stop() {
-    pTracker->StopTracking();
-    fatigueTimer->stop();
-
-    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(QDateTime::currentDateTime());
-    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
-    outputLog(" |----------------------| ");
-}
-
-void MainGLWidget::debug() {
+void MaskView::debug() {
     fboScene->toImage().save("fboScene.png", "PNG");
     fboBlur->toImage().save("fboBlur.png", "PNG");
 }
 
-// -------- slots -------- //
-void MainGLWidget::onFatigueTimerTimeOut() {
-    if (toFlash) {
-        flashing = !flashing;
-        fatigueTimer->start(flashing ? 1000/60 : FATIGUE_LIMIT);
-    }
-
-    if (toBlur) {
-        blurTimer->start(1000/60);
-        fatigueTimer->stop();
-    }
-
-    outputLog(" stimulated ");
-    update();
+void MaskView::flash() {
+    flashing = true;
+    flashTimer->start();
 }
 
-void MainGLWidget::onBlurTimerTimeOut() {
-    blurRadius += 0.01f;
-    update();
+void MaskView::blur() {
+    blurring = true;
+    blurTimer->start();
 }
 
-void MainGLWidget::onBlinkDectected() {
-    blinkCounter++;
-
+void MaskView::reset() {
     blurRadius = 0.0f;
     blurTimer->stop();
-
-    fatigueTimer->start(FATIGUE_LIMIT);
-    outputLog(" blink detected ");
 }
 
-void MainGLWidget::outputLog(const QString &msg) {
-    QString fileName = QString("./log/").append(timestamp.toString()).append(".txt");
-    QFile logFile(fileName);
-    if (logFile.open(QFile::ReadWrite|QFile::Append|QFile::Text)) {
-        QTextStream outStream(&logFile);
-        outStream << QDateTime::currentDateTime().toString() << msg << "\n";
-    }
+// -------- slots -------- //
+void MaskView::onRenderTimerTimeOut() {
+//    update();
+}
+
+void MaskView::onFlashTimerTimeOut() {
+    flashing = false;
+    flashTimer->stop();
+}
+
+void MaskView::onBlurTimerTimeOut() {
+    blurRadius += 0.01f;
+    update();
 }

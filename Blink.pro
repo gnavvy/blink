@@ -20,7 +20,7 @@ QMAKE_LFLAGS_X86_64             -= -arch x86_64 -Xarch_x86_64 -mmacosx-version-m
 QMAKE_LINK       = $$QMAKE_CXX
 QMAKE_LINK_SHLIB = $$QMAKE_CXX
 
-QT += core gui opengl widgets
+QT += core gui opengl widgets webkitwidgets
 
 TARGET = Blink
 TEMPLATE = app
@@ -37,7 +37,8 @@ HEADERS += \
     TaskImage2.h \
     TaskVideo.h \
     TaskText.h \
-    MainGLWidget.h
+    MainWidget.h \
+    MaskView.h
 
 SOURCES += \
     main.cpp \
@@ -47,7 +48,8 @@ SOURCES += \
     TaskImage2.cpp \
     TaskVideo.cpp \
     TaskText.cpp \
-    MainGLWidget.cpp
+    MainWidget.cpp \
+    MaskView.cpp
 
 OTHER_FILES += \
     blur.frag \

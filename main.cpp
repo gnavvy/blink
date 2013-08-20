@@ -1,11 +1,11 @@
-#include "MainGLWidget.h"
+#include "MainWidget.h"
 #include <QApplication>
 
 int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
 
-    MainGLWidget w;
-    w.showMaximized();
+    MainWidget w;
+    w.show();
 
     return a.exec();
 }

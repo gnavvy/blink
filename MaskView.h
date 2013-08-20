@@ -3,24 +3,28 @@
 
 #include <QTimer>
 #include <QtOpenGL>
-#include <QDateTime>
 #include <QGLWidget>
 #include <QGLShader>
 #include <QGLFunctions>
-#include "EyeTracker.h"
+#include <QtWebKitWidgets>
 
-class MainGLWidget : public QGLWidget {
+class MaskView : public QGLWidget {
     Q_OBJECT
 public:
-    explicit MainGLWidget(QWidget *parent = 0);
-    virtual ~MainGLWidget();
+    explicit MaskView(QWidget *parent = 0);
+    virtual ~MaskView();
+
+    // control
+    void reset();
+    void flash();
+    void blur();
     
 signals:
     
 public slots:
-    void onFatigueTimerTimeOut();
+    void onRenderTimerTimeOut();
+    void onFlashTimerTimeOut();
     void onBlurTimerTimeOut();
-    void onBlinkDectected();
 
 protected:
     void initializeGL();
@@ -32,14 +36,16 @@ private:
     // ---- member ---- //
     const int   FATIGUE_LIMIT = 3000;  // 5s
     const int   BLUR_SIZE = 512;
+    const int   FPS = 30;
+    const int   WEB_VIEW_WIDTH = 1280;
+    const int   WEB_VIEW_HEIGHT = 800;
 
-    bool        toFlash = false;
-    bool        flashing = false;
-    bool        toBlur  = true;
+    bool        blurring;
+    bool        flashing;
     QImage      img;
-    QTimer     *fatigueTimer;
+    QTimer     *renderTimer;
+    QTimer     *flashTimer;
     QTimer     *blurTimer;
-    QDateTime   timestamp;
 
     // opengl
     GLuint *texture = new GLuint[2];
@@ -51,21 +57,16 @@ private:
     QGLShader *fragShader;
 
     // blink detection
-    EyeTracker *pTracker;
-    QThread    *pTrackerThread;
     int         blinkCounter = 0;
     float       blurRadius = 0.0f;
 
     // ---- function ---- //
     void setupTimers();
-    void setupEyeTracker();
-    void setupGLTextures();
     void setupShader(const QString &vshader, const QString &fshader);
 
-    void start();
-    void stop();
     void debug();
 
+    void updateTexture();
     void renderFromTexture(GLuint tex);
 
     void outputLog(const QString &msg);
