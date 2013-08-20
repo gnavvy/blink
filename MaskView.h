@@ -11,7 +11,7 @@
 class MaskView : public QGLWidget {
     Q_OBJECT
 public:
-    explicit MaskView(QWidget *parent = 0);
+    explicit MaskView(QWidget *contentWidget);
     virtual ~MaskView();
 
     // control
@@ -37,24 +37,24 @@ private:
     const int   FATIGUE_LIMIT = 3000;  // 5s
     const int   BLUR_SIZE = 512;
     const int   FPS = 30;
-    const int   WEB_VIEW_WIDTH = 1280;
-    const int   WEB_VIEW_HEIGHT = 800;
-
     bool        blurring;
     bool        flashing;
-    QImage      img;
+
     QTimer     *renderTimer;
     QTimer     *flashTimer;
     QTimer     *blurTimer;
 
+    QWidget    *contentView;
+    int         contentWidth;
+    int         contentHeight;
+
     // opengl
-    GLuint *texture = new GLuint[2];
     QGLFramebufferObject *fboScene;
     QGLFramebufferObject *fboBlurV;
     QGLFramebufferObject *fboBlur;
-    QGLShaderProgram *blurShader;
-    QGLShader *vertShader;
-    QGLShader *fragShader;
+    QGLShaderProgram     *blurShader;
+    QGLShader            *vertShader;
+    QGLShader            *fragShader;
 
     // blink detection
     int         blinkCounter = 0;
@@ -63,13 +63,8 @@ private:
     // ---- function ---- //
     void setupTimers();
     void setupShader(const QString &vshader, const QString &fshader);
-
     void debug();
-
-    void updateTexture();
     void renderFromTexture(GLuint tex);
-
-    void outputLog(const QString &msg);
 };
 
 #endif // MAINGLWIDGET_H

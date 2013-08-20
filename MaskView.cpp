@@ -1,7 +1,10 @@
 #include "MaskView.h"
 
-MaskView::MaskView(QWidget *parent) : QGLWidget(parent) {
-    this->resize(WEB_VIEW_WIDTH, WEB_VIEW_HEIGHT);
+MaskView::MaskView(QWidget *contentWidget) {
+    contentView = contentWidget;
+    contentWidth = contentView->size().width();
+    contentHeight = contentView->size().height();
+
     setupTimers();
 }
 
@@ -10,7 +13,6 @@ MaskView::~MaskView() {
     if (flashTimer)     delete flashTimer;
     if (renderTimer)    delete renderTimer;
 
-    if (texture)        delete texture;
     if (fboScene)       delete fboScene;
     if (fboBlur)        delete fboBlur;
     if (blurShader)     delete blurShader;
@@ -29,6 +31,7 @@ void MaskView::setupTimers() {
     renderTimer = new QTimer(this);
     renderTimer->setInterval(1000/FPS);
     connect(renderTimer, SIGNAL(timeout()), this, SLOT(onRenderTimerTimeOut()));
+    renderTimer->start();
 }
 
 void MaskView::setupShader(const QString &vshader, const QString &fshader) {
@@ -53,36 +56,18 @@ void MaskView::setupShader(const QString &vshader, const QString &fshader) {
     blurShader->link();
 }
 
-void MaskView::updateTexture() {
-    if (!img.load(":/imgs/bg.png")) {
-        qDebug() << "cannot load bg.png";
-        exit(EXIT_FAILURE);
-    }
-
-    img = QGLWidget::convertToGLFormat(img);
-    if (img.isNull()) {
-        qDebug() << "cannot convert to gl format";
-        exit(EXIT_FAILURE);
-    }
-
-    glGenTextures(2, texture);
-    glBindTexture(GL_TEXTURE_2D, texture[0]);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width(), img.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, img.bits());
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-}
-
 void MaskView::initializeGL() {
-    updateTexture();
-
     setupShader(":/blur.vert", ":/blur.frag");
 
-    fboScene = new QGLFramebufferObject(WEB_VIEW_WIDTH, WEB_VIEW_HEIGHT);
-    fboBlur  = new QGLFramebufferObject(WEB_VIEW_WIDTH, WEB_VIEW_HEIGHT);
+    fboScene = new QGLFramebufferObject(contentWidth, contentHeight);
+    fboBlur  = new QGLFramebufferObject(contentWidth, contentHeight);
 
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
-    glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     glMatrixMode(GL_PROJECTION);
@@ -90,22 +75,27 @@ void MaskView::initializeGL() {
 }
 
 void MaskView::paintGL() {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     if (flashing) {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         return;
     } else {
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);   // transparent
+        glClearColor(0.2f, 0.2f, 0.2f, 0.0f);   // transparent
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    // render to fbo
-    glViewport(0, 0, fboScene->width(), fboScene->height());
-    fboScene->bind(); {
-        renderFromTexture(texture[0]);
-    } fboScene->release();
+    GLuint tex = bindTexture(contentView->grab());
 
-    if (blurring) {
+    if (!blurring) {    // render glview using content from the contentWidget
+        glViewport(0, 0, contentWidth, contentHeight);
+        renderFromTexture(tex);
+    } else {            // off screen blurring first, then on screen
+        // render to fbo
+        glViewport(0, 0, fboScene->width(), fboScene->height());
+        fboScene->bind(); {
+            renderFromTexture(tex);
+        } fboScene->release();
+
         blurShader->bind();
         blurShader->setUniformValue("tex0", fboScene->texture());
         blurShader->setUniformValue("radius", blurRadius);
@@ -123,15 +113,28 @@ void MaskView::paintGL() {
         } fboScene->release();
 
         blurShader->release();
-    }
 
-    // render to screen
-    glViewport(0, 0, width(), height());
-    renderFromTexture(fboScene->texture());
+        // render to screen
+        glViewport(0, 0, contentWidth, contentHeight);
+        renderFromTexture(fboScene->texture());
+    }
 }
 
 void MaskView::resizeGL(int w, int h) {
     glViewport(0, 0, w, h);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+
+    contentWidth = contentView->size().width();
+    contentHeight = contentView->size().height();
+
+    update();
 }
 
 void MaskView::keyPressEvent(QKeyEvent *event) {
@@ -142,8 +145,8 @@ void MaskView::keyPressEvent(QKeyEvent *event) {
 }
 
 void MaskView::renderFromTexture(GLuint tex) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glBindTexture(GL_TEXTURE_2D, tex);
     glBegin(GL_QUADS);
         glTexCoord2f(0.0f, 0.0f); glVertex2f(-1.0f,-1.0f);
@@ -176,7 +179,7 @@ void MaskView::reset() {
 
 // -------- slots -------- //
 void MaskView::onRenderTimerTimeOut() {
-//    update();
+    update();
 }
 
 void MaskView::onFlashTimerTimeOut() {

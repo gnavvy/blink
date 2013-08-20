@@ -24,10 +24,11 @@ void MainWidget::setupEyeTracker() {
 }
 
 void MainWidget::setupViews() {
-    maskView = new MaskView(this);
-
     webView = new QWebView(this);
     webView->load(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
+
+    maskView = new MaskView(webView);
+    maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
 
     baseLayout = new QGridLayout;
     baseLayout->addWidget(maskView, 0, 0);
