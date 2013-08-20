@@ -8,8 +8,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/objdetect/objdetect.hpp>
 
-#include "Utilities.h"
-
 class EyeTracker : public QObject {
     Q_OBJECT
 public:
