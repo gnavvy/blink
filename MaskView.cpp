@@ -140,6 +140,12 @@ void MaskView::resizeGL(int w, int h) {
     glLoadIdentity();
 
     updateLayout();
+
+    delete fboScene;
+    delete fboBlur;
+    fboScene = new QGLFramebufferObject(contentWidth, contentHeight);
+    fboBlur  = new QGLFramebufferObject(contentWidth, contentHeight);
+
     update();
 }
 
