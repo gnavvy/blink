@@ -15,35 +15,43 @@ public:
 signals:
     
 public slots:
+    void onStartButtonClicked();
+    void onFinishButtonClicked();
     void onFatigueTimerTimeOut();
+    void onTaskButtonClicked();
     void onBlinkDectected();
 
 private:
     // -- member -- //
-    const int   FATIGUE_LIMIT = 3000;  // 5s
+    const int FATIGUE_LIMIT = 3000;  // 3s
+    const int DEFAULT_WIDTH = 1280;
+    const int DEFAULT_HEIGHT = 800;
+    const int NUM_TASKS = 6;
+    const QString TEXT_ENABLE_STIMULUS = "Enable Stimulus";
+    const QString TEXT_DISABLE_STIMULUS = "Disable Stimulus";
 
-    EyeTracker *eyeTracker;
-    QThread    *eyeTrackerThread;
+    QGridLayout *baseLayout = nullptr;
+    QWebView *webView = nullptr;
+    MaskView *maskView = nullptr;
 
-    QGridLayout *baseLayout;
-    QWebView    *webView;
-    MaskView    *maskView;
+    EyeTracker *eyeTracker = nullptr;
+    QThread *eyeTrackerThread = nullptr;
+    QTimer *fatigueTimer = nullptr;
+    QDateTime timestamp;
 
-    QTimer     *fatigueTimer;
-    QDateTime   timestamp;
+    int blinkCounter = 0;
+    bool toFlash = false;
+    bool toBlur  = true;
+    bool stimulusEnabled = false;
 
-    int         blinkCounter = 0;   // -> eye tracker?
-    bool        toFlash = false;
-    bool        toBlur  = true;
+    std::vector<QPushButton*> taskButtons;
+    QPushButton *buttonStart = nullptr;
+    QPushButton *buttonFinish = nullptr;
 
     // -- functions -- //
     void setupEyeTracker();
     void setupViews();
     void setupTimers();
-
-    void start();
-    void stop();
-
     void outputLog(const QString &msg);
     
 };

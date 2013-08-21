@@ -15,6 +15,7 @@ public:
     virtual ~MaskView();
 
     // control
+    void updateLayout();
     void reset();
     void flash();
     void blur();
@@ -36,25 +37,23 @@ private:
     // ---- member ---- //
     const int   FATIGUE_LIMIT = 3000;  // 5s
     const int   BLUR_SIZE = 512;
-    const int   FPS = 30;
+    const int   FPS = 60;
     bool        blurring;
     bool        flashing;
 
-    QTimer     *renderTimer;
-    QTimer     *flashTimer;
-    QTimer     *blurTimer;
-
-    QWidget    *contentView;
+    QTimer     *renderTimer = nullptr;
+    QTimer     *flashTimer  = nullptr;
+    QTimer     *blurTimer   = nullptr;
+    QWidget    *contentView = nullptr;
     int         contentWidth;
     int         contentHeight;
 
     // opengl
-    QGLFramebufferObject *fboScene;
-    QGLFramebufferObject *fboBlurV;
-    QGLFramebufferObject *fboBlur;
-    QGLShaderProgram     *blurShader;
-    QGLShader            *vertShader;
-    QGLShader            *fragShader;
+    QGLFramebufferObject *fboScene   = nullptr;
+    QGLFramebufferObject *fboBlur    = nullptr;
+    QGLShaderProgram     *blurShader = nullptr;
+    QGLShader            *vertShader = nullptr;
+    QGLShader            *fragShader = nullptr;
 
     // blink detection
     int         blinkCounter = 0;

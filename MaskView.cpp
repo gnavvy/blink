@@ -2,9 +2,6 @@
 
 MaskView::MaskView(QWidget *contentWidget) {
     contentView = contentWidget;
-    contentWidth = contentView->size().width();
-    contentHeight = contentView->size().height();
-
     setupTimers();
 }
 
@@ -25,7 +22,7 @@ void MaskView::setupTimers() {
     connect(blurTimer, SIGNAL(timeout()), this, SLOT(onBlurTimerTimeOut()));
 
     flashTimer = new QTimer(this);
-    flashTimer->setInterval(1000/60);
+    flashTimer->setInterval(1000/FPS);
     connect(flashTimer, SIGNAL(timeout()), this, SLOT(onFlashTimerTimeOut()));
 
     renderTimer = new QTimer(this);
@@ -57,10 +54,7 @@ void MaskView::setupShader(const QString &vshader, const QString &fshader) {
 }
 
 void MaskView::initializeGL() {
-    setupShader(":/blur.vert", ":/blur.frag");
-
-    fboScene = new QGLFramebufferObject(contentWidth, contentHeight);
-    fboBlur  = new QGLFramebufferObject(contentWidth, contentHeight);
+    qDebug() << "initializeGL";
 
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_DEPTH_TEST);
@@ -72,6 +66,8 @@ void MaskView::initializeGL() {
     glLoadIdentity();
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
+
+    setupShader(":/blur.vert", ":/blur.frag");
 }
 
 void MaskView::paintGL() {
@@ -90,6 +86,14 @@ void MaskView::paintGL() {
         glViewport(0, 0, contentWidth, contentHeight);
         renderFromTexture(tex);
     } else {            // off screen blurring first, then on screen
+        if (!fboScene) {
+            fboScene = new QGLFramebufferObject(contentWidth, contentHeight);
+        }
+
+        if (!fboBlur) {
+            fboBlur  = new QGLFramebufferObject(contentWidth, contentHeight);
+        }
+
         // render to fbo
         glViewport(0, 0, fboScene->width(), fboScene->height());
         fboScene->bind(); {
@@ -118,9 +122,13 @@ void MaskView::paintGL() {
         glViewport(0, 0, contentWidth, contentHeight);
         renderFromTexture(fboScene->texture());
     }
+
+    deleteTexture(tex);
 }
 
 void MaskView::resizeGL(int w, int h) {
+    qDebug() << "resizeGL";
+
     glViewport(0, 0, w, h);
 
     glEnable(GL_BLEND);
@@ -131,9 +139,7 @@ void MaskView::resizeGL(int w, int h) {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    contentWidth = contentView->size().width();
-    contentHeight = contentView->size().height();
-
+    updateLayout();
     update();
 }
 
@@ -157,24 +163,34 @@ void MaskView::renderFromTexture(GLuint tex) {
     glFlush();
 }
 
-void MaskView::debug() {
-    fboScene->toImage().save("fboScene.png", "PNG");
-    fboBlur->toImage().save("fboBlur.png", "PNG");
+// -------- ctrls -------- //
+void MaskView::updateLayout() {
+    qDebug() << "updateLayout";
+    contentWidth = contentView->size().width();
+    contentHeight = contentView->size().height();
 }
 
 void MaskView::flash() {
+    qDebug() << "flash";
     flashing = true;
     flashTimer->start();
 }
 
 void MaskView::blur() {
+    qDebug() << "blur";
     blurring = true;
     blurTimer->start();
 }
 
 void MaskView::reset() {
+    qDebug() << "reset";
     blurRadius = 0.0f;
     blurTimer->stop();
+}
+
+void MaskView::debug() {
+    fboScene->toImage().save("fboScene.png", "PNG");
+    fboBlur->toImage().save("fboBlur.png", "PNG");
 }
 
 // -------- slots -------- //
