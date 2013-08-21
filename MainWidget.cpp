@@ -6,6 +6,7 @@ MainWidget::MainWidget(QWidget *parent) : QWidget(parent) {
     setupEyeTracker();
     setupTimers();
     setupViews();
+    setupTasks();
 }
 
 MainWidget::~MainWidget() {
@@ -34,7 +35,6 @@ void MainWidget::setupViews() {
     baseLayout = new QGridLayout();  // 8*8 grid
 
     webView = new QWebView(this);
-    webView->load(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
 
     maskView = new MaskView(webView);
     maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -65,6 +65,15 @@ void MainWidget::setupTimers() {
     fatigueTimer = new QTimer(this);
     fatigueTimer->setInterval(FATIGUE_LIMIT);
     connect(fatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
+}
+
+void MainWidget::setupTasks() {
+    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
+    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
+    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
+    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
+    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
+    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
 }
 
 // -------- slots -------- //
@@ -100,7 +109,9 @@ void MainWidget::onFatigueTimerTimeOut() {
 }
 
 void MainWidget::onTaskButtonClicked() {
-
+    QPushButton *button = (QPushButton*)sender();
+    int taskId = button->text().right(1).toInt();
+    webView->load(taskUrls[taskId]);
 }
 
 void MainWidget::onBlinkDectected() {

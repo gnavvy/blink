@@ -45,13 +45,15 @@ private:
     bool stimulusEnabled = false;
 
     std::vector<QPushButton*> taskButtons;
+    std::vector<QUrl> taskUrls;
     QPushButton *buttonStart = nullptr;
     QPushButton *buttonFinish = nullptr;
 
     // -- functions -- //
     void setupEyeTracker();
-    void setupViews();
     void setupTimers();
+    void setupViews();
+    void setupTasks();
     void outputLog(const QString &msg);
     
 };
