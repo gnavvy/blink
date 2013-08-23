@@ -38,6 +38,7 @@ private:
     QThread *eyeTrackerThread = nullptr;
     QTimer *fatigueTimer = nullptr;
     QDateTime timestamp;
+    QDateTime timestart;
 
     int blinkCounter = 0;
     bool toFlash = false;

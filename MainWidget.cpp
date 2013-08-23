@@ -68,18 +68,20 @@ void MainWidget::setupTimers() {
 }
 
 void MainWidget::setupTasks() {
+    taskUrls.push_back(QUrl("http://mrnussbaum.com/readingcomp/doughnuts/"));
     taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
-    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
-    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
-    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
-    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
-    taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
+    taskUrls.push_back(QUrl("http://www.spotthedifference.com/photogame.asp"));
+    taskUrls.push_back(QUrl("http://faculty.washington.edu/chudler/puzmatch.html"));
+    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=zAFcV7zuUDA"));
+    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=nkSQCgWPAlg"));
+    std::random_shuffle(taskUrls.begin(), taskUrls.end());
 }
 
 // -------- slots -------- //
 void MainWidget::onStartButtonClicked() {
     blinkCounter = 0;
-    timestamp = QDateTime::currentDateTime();
+    timestart = QDateTime::currentDateTime();
+    timestamp = timestart;
     eyeTrackerThread->start();
     outputLog(" |----------------------| ");
 }
@@ -110,8 +112,17 @@ void MainWidget::onFatigueTimerTimeOut() {
 
 void MainWidget::onTaskButtonClicked() {
     QPushButton *button = (QPushButton*)sender();
-    int taskId = button->text().right(1).toInt();
+    int taskId = button->text().right(1).toInt()-1;
     webView->load(taskUrls[taskId]);
+
+    QDateTime current = QDateTime::currentDateTime();
+    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(current);
+    timestamp = current;
+    blinkCounter = 0;
+
+    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
+    outputLog(" |----------------------| ");
+    outputLog(QString(" Task: ").append(QUrl(taskUrls[taskId]).toString()));
 }
 
 void MainWidget::onBlinkDectected() {
@@ -125,7 +136,7 @@ void MainWidget::onBlinkDectected() {
 
 // -------- utils -------- //
 void MainWidget::outputLog(const QString &msg) {
-    QString fileName = QString("./log/").append(timestamp.toString()).append(".txt");
+    QString fileName = QString("./log/").append(timestart.toString()).append(".txt");
     QFile logFile(fileName);
     if (logFile.open(QFile::ReadWrite|QFile::Append|QFile::Text)) {
         QTextStream outStream(&logFile);
