@@ -11,10 +11,13 @@
 class MaskView : public QGLWidget {
     Q_OBJECT
 public:
-    explicit MaskView(QWidget *contentWidget);
+    explicit MaskView(QWidget *cw);
     virtual ~MaskView();
 
     // control
+//    void setContentWidget(QWidget *cw) {
+//        this->contentView = cw;
+//    }
     void updateLayout();
     void reset();
     void flash();

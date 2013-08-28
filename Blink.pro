@@ -12,7 +12,7 @@ LIBS           += -L/usr/local/lib
 LIBS           += -L/usr/local/opt/qt5/lib
 LIBS           += -lm -lopencv_core -lopencv_highgui -lopencv_objdetect -lopencv_imgproc
 
-QT += core gui opengl widgets webkitwidgets
+QT += core gui opengl widgets webkitwidgets multimedia multimediawidgets
 
 TARGET = Blink
 TEMPLATE = app

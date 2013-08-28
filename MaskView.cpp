@@ -1,7 +1,7 @@
 #include "MaskView.h"
 
-MaskView::MaskView(QWidget *contentWidget) {
-    contentView = contentWidget;
+MaskView::MaskView(QWidget *cw) {
+    contentView = cw;
     setupTimers();
 }
 
@@ -79,6 +79,8 @@ void MaskView::paintGL() {
         glClearColor(0.2f, 0.2f, 0.2f, 0.0f);   // transparent
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
+
+    if (!contentView) return;
 
     GLuint tex = bindTexture(contentView->grab());
 
@@ -172,8 +174,8 @@ void MaskView::renderFromTexture(GLuint tex) {
 // -------- ctrls -------- //
 void MaskView::updateLayout() {
     qDebug() << "updateLayout";
-    contentWidth = contentView->size().width();
-    contentHeight = contentView->size().height();
+    contentWidth = contentView ? contentView->size().width() : 0;
+    contentHeight = contentView ? contentView->size().height() : 0;
 }
 
 void MaskView::flash() {
