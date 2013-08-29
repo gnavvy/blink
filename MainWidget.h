@@ -1,6 +1,7 @@
 #ifndef MAINWIDGET_H
 #define MAINWIDGET_H
 
+#include <random>
 #include <algorithm>
 #include <QWidget>
 #include <QtWebKit>
@@ -25,11 +26,12 @@ public slots:
     void onTaskButtonClicked();
     void onBlinkDectected();
 
+protected:
+    void resizeEvent(QResizeEvent *event);
+
 private:
     // -- member -- //
     const int FATIGUE_LIMIT = 3000;  // 3s
-    const int DEFAULT_WIDTH = 1280;
-    const int DEFAULT_HEIGHT = 800;
     const int NUM_TASKS = 6;
     const QString TEXT_ENABLE_STIMULUS = "Enable Stimulus";
     const QString TEXT_DISABLE_STIMULUS = "Disable Stimulus";
@@ -57,6 +59,7 @@ private:
     QPushButton *buttonStart = nullptr;
     QPushButton *buttonPause = nullptr;
     QPushButton *buttonFinish = nullptr;
+    QPushButton *buttonCurrentTask = nullptr;
 
     // -- functions -- //
     void setupEyeTracker();

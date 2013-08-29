@@ -6,26 +6,46 @@ EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {
         exit(EXIT_FAILURE);
     }
     tracking = true;
+    pausing = true;
 }
 
 EyeTracker::~EyeTracker() {
-    StopTracking();
+    stopTracking();
 }
 
-void EyeTracker::run() {
-    capture = cvCaptureFromCAM(-1);  // use default camera
-    if (capture) {
-        while (tracking) {
-            frame = cvQueryFrame(capture);
-            if (frame.empty()) { continue; }
+void EyeTracker::start() {
+    cv::VideoCapture capture(0);
 
+    if (!capture.isOpened()) {
+        std::cout << "failed to capture frames from webcam." << std::endl;
+        return;
+    }
+
+    cv::Mat frame;
+    while (frame.empty()) {
+        capture >> frame;
+        std::cout << "empty frame." << std::endl;
+    }
+
+    cv::Size frameSize = frame.size();
+
+    std::cout << frameSize.width << ", " << frameSize.height << std::endl;
+
+    cv::VideoWriter video("test.mp4", CV_FOURCC('P','I','M','1'), kFPS, frameSize, true);
+    if (!video.isOpened()) {
+        std::cout << "failed to create video writer." << std::endl;
+        return;
+    }
+
+    while (tracking) {
+        capture >> frame;
+        if (!frame.empty()) {
             cv::cvtColor(frame, frame, CV_BGR2GRAY);
             cv::flip(frame, frame, 1);
             detectAndDisplay(frame);
-
-            msleep(1000/30);
+    //      video.write(frame);
         }
-        cvReleaseCapture(&capture);
+        msleep(1000/kFPS);
     }
     emit finished();
 }

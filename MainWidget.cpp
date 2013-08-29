@@ -1,7 +1,6 @@
 #include "MainWidget.h"
 
 MainWidget::MainWidget(QWidget *parent) : QWidget(parent) {
-    this->resize(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     setupEyeTracker();
     setupTimers();
     setupViews();
@@ -22,11 +21,13 @@ void MainWidget::setupEyeTracker() {
     eyeTracker       = new EyeTracker();
     eyeTracker->moveToThread(eyeTrackerThread);
 
-    connect(eyeTrackerThread, SIGNAL(started()), eyeTracker, SLOT(Start()));
+    connect(eyeTrackerThread, SIGNAL(started()), eyeTracker, SLOT(start()));
     connect(eyeTracker, SIGNAL(blinkDetected()), this, SLOT(onBlinkDectected()));
     connect(eyeTracker, SIGNAL(finished()), eyeTrackerThread, SLOT(quit()));
     connect(eyeTrackerThread, SIGNAL(finished()), eyeTracker, SLOT(deleteLater()));
     connect(eyeTrackerThread, SIGNAL(finished()), eyeTrackerThread, SLOT(deleteLater()));
+
+    paused = false;
 }
 
 void MainWidget::setupViews() {
@@ -49,9 +50,11 @@ void MainWidget::setupViews() {
     buttonStart = new QPushButton("Start");
     buttonPause = new QPushButton("Pause");
     buttonFinish = new QPushButton("Finish");
+
     connect(buttonStart, SIGNAL(clicked()), this, SLOT(onStartButtonClicked()));
     connect(buttonPause, SIGNAL(clicked()), this, SLOT(onPauseButtonClicked()));
     connect(buttonFinish, SIGNAL(clicked()), this, SLOT(onFinishButtonClicked()));
+
     baseLayout->addWidget(buttonStart, 0, 0, 1, 1);
     baseLayout->addWidget(buttonPause, 0, 7, 1, 1);
     baseLayout->addWidget(buttonFinish, 0, 8, 1, 1);
@@ -74,11 +77,20 @@ void MainWidget::setupTasks() {
     taskUrls.push_back(QUrl("http://faculty.washington.edu/chudler/puzmatch.html"));
     taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/Ted.mp4"));
     taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/Trailer.mp4"));
+//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
+//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
+//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
+//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
+//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
+//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
+
+    std::srand(QTime::currentTime().msec());
     std::random_shuffle(taskUrls.begin(), taskUrls.end());
 }
 
 // -------- slots -------- //
 void MainWidget::onStartButtonClicked() {
+    buttonStart->setDisabled(true);
     blinkCounter = 0;
     timestart = QDateTime::currentDateTime();
     timestamp = timestart;
@@ -88,18 +100,19 @@ void MainWidget::onStartButtonClicked() {
 
 void MainWidget::onPauseButtonClicked() {
     paused = true;
-    blinkCounter = 0;
+    buttonCurrentTask->setDisabled(true);
 
-    QDateTime current = QDateTime::currentDateTime();
-    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(current);
-    timestamp = current;
+    QDateTime now = QDateTime::currentDateTime();
+    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
+    blinkCounter = 0;
+    timestamp = now;
 
     outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
     outputLog(" |----------------------| ");
 }
 
 void MainWidget::onFinishButtonClicked() {
-    eyeTracker->StopTracking();
+    eyeTracker->stopTracking();
     fatigueTimer->stop();
 
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(QDateTime::currentDateTime());
@@ -123,8 +136,8 @@ void MainWidget::onFatigueTimerTimeOut() {
 }
 
 void MainWidget::onTaskButtonClicked() {
-    QPushButton *button = (QPushButton*)sender();
-    int taskId = button->text().right(1).toInt()-1;
+    buttonCurrentTask = (QPushButton*)sender();
+    int taskId = buttonCurrentTask->text().right(1).toInt()-1;
     QUrl taskUrl = taskUrls[taskId];
     if (taskUrl.scheme() == SCHEME_HTTP)
         webView->load(taskUrl);
@@ -144,6 +157,10 @@ void MainWidget::onBlinkDectected() {
     }
     if (!paused)
         outputLog(" blink detected ");
+}
+
+void MainWidget::resizeEvent(QResizeEvent *event) {
+    maskView->updateLayout();
 }
 
 // -------- utils -------- //

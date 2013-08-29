@@ -13,13 +13,12 @@ class EyeTracker : public QObject {
 public:
     explicit EyeTracker(QObject *parent = 0);
     virtual ~EyeTracker();
-    void StopTracking() { tracking = false; }
+    void stopTracking() { tracking = false; }
+    void pause() { pausing = true; }
+    void resume() { pausing = false; }
 
 public slots:
-    void Start() { run(); }
-
-protected:
-    void run();
+    void start();
 
 signals:
     void blinkDetected();
@@ -29,20 +28,23 @@ signals:
 private:
     const int kMinFace = 300;
     const int kMinEyes = 100;
+    const int kFPS = 30;
     const std::string kWindowTitle = "Capture - Face detection";
     const std::string kFaceCascadePath = "./res/haarcascade_frontalface_alt.xml";
     const std::string kEyesCascadePath = "./res/haarcascade_eye_tree_eyeglasses.xml";
 
     cv::CascadeClassifier faceCascade;
     cv::CascadeClassifier eyesCascade;
-    CvCapture *capture;
-    cv::Mat frame;
+//    CvCapture *capture = nullptr;
+//    CvVideoWriter *video = nullptr;
+//    cv::Mat frame;
 
     int numEyesCurr = 0;
     int numEyesPrev = 0;
     int numEyesHist = 0;
 
     bool tracking = false;
+    bool pausing = false;
 
     void msleep(int ms);
     void detectAndDisplay(cv::Mat& frame);

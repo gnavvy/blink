@@ -17,6 +17,8 @@ QT += core gui opengl widgets webkitwidgets multimedia multimediawidgets
 TARGET = Blink
 TEMPLATE = app
 
+CONFIG += debug
+
 HEADERS += \
     EyeTracker.h \
     MainWidget.h \
