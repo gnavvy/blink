@@ -22,18 +22,17 @@ void MainWidget::setupEyeTracker() {
     eyeTracker->moveToThread(eyeTrackerThread);
 
     connect(eyeTrackerThread, SIGNAL(started()), eyeTracker, SLOT(start()));
+    connect(eyeTracker, SIGNAL(frameReady(QImage)), this, SLOT(onCvFrameReady(QImage)));
     connect(eyeTracker, SIGNAL(blinkDetected()), this, SLOT(onBlinkDectected()));
     connect(eyeTracker, SIGNAL(finished()), eyeTrackerThread, SLOT(quit()));
     connect(eyeTrackerThread, SIGNAL(finished()), eyeTracker, SLOT(deleteLater()));
     connect(eyeTrackerThread, SIGNAL(finished()), eyeTrackerThread, SLOT(deleteLater()));
-
-    paused = false;
 }
 
 void MainWidget::setupViews() {
     baseLayout = new QGridLayout();  // 9*9 grid
 
-    webView = new QWebView();
+    webView = new QWebView(this);
     maskView = new MaskView(webView);
     maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
 
@@ -77,13 +76,6 @@ void MainWidget::setupTasks() {
     taskUrls.push_back(QUrl("http://faculty.washington.edu/chudler/puzmatch.html"));
     taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/Ted.mp4"));
     taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/Trailer.mp4"));
-//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
-//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
-//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
-//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
-//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
-//    taskUrls.push_back(QUrl("http://www.youtube.com/watch?v=xEnPZ78queI"));
-
     std::srand(QTime::currentTime().msec());
     std::random_shuffle(taskUrls.begin(), taskUrls.end());
 }
@@ -93,29 +85,38 @@ void MainWidget::onStartButtonClicked() {
     buttonStart->setDisabled(true);
     blinkCounter = 0;
     timestart = QDateTime::currentDateTime();
+
+    QString taskPath = QString("./log/").append(timestart.toLocalTime().toString());
+    if (!QDir(taskPath).exists())
+        QDir().mkdir(taskPath);
+
     timestamp = timestart;
     eyeTrackerThread->start();
     outputLog(" |----------------------| ");
 }
 
 void MainWidget::onPauseButtonClicked() {
-    paused = true;
-    buttonCurrentTask->setDisabled(true);
+    if (buttonCurrentTask)
+        buttonCurrentTask->setDisabled(true);
+    else return;
+
+    eyeTracker->pause();
 
     QDateTime now = QDateTime::currentDateTime();
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
-    blinkCounter = 0;
-    timestamp = now;
-
     outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
     outputLog(" |----------------------| ");
+
+    blinkCounter = 0;
+    timestamp = now;
 }
 
 void MainWidget::onFinishButtonClicked() {
     eyeTracker->stopTracking();
     fatigueTimer->stop();
 
-    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(QDateTime::currentDateTime());
+    QDateTime now = QDateTime::currentDateTime();
+    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
     outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
     outputLog(" |----------------------| ");
 }
@@ -144,8 +145,13 @@ void MainWidget::onTaskButtonClicked() {
     else if (taskUrl.scheme() == SCHEME_FILE)
         QDesktopServices::openUrl(taskUrl);
 
-    paused = false;
+    eyeTracker->resume();
     timestamp = QDateTime::currentDateTime();
+    QString subTaskPath = QString("./log/").append(timestart.toLocalTime().toString());
+    subTaskPath.append("/").append(timestamp.toLocalTime().toString());
+    if (!QDir(subTaskPath).exists())
+        QDir().mkdir(subTaskPath);
+
     outputLog(QString(" Task: ").append(QUrl(taskUrls[taskId]).toString()));
 }
 
@@ -155,8 +161,16 @@ void MainWidget::onBlinkDectected() {
         fatigueTimer->start();
         maskView->reset();
     }
-    if (!paused)
+    if (!eyeTracker->isPaused())
         outputLog(" blink detected ");
+}
+
+void MainWidget::onCvFrameReady(QImage img) {
+    QString fp = QString("./log/").append(timestart.toLocalTime().toString());      // task path
+    fp.append("/").append(timestamp.toLocalTime().toString()).append("/");          // subtask path
+    fp.append(QString::number(timestamp.msecsTo(QDateTime::currentDateTime())));    // file name
+    fp.append(".png");
+    img.save(fp, "PNG");
 }
 
 void MainWidget::resizeEvent(QResizeEvent *event) {
@@ -165,8 +179,9 @@ void MainWidget::resizeEvent(QResizeEvent *event) {
 
 // -------- utils -------- //
 void MainWidget::outputLog(const QString &msg) {
-    QString fileName = QString("./log/").append(timestart.toString()).append(".txt");
-    QFile logFile(fileName);
+    QString fn = QString("./log/").append(timestart.toLocalTime().toString());
+    fn.append("/").append(timestart.toLocalTime().toString()).append(".txt");
+    QFile logFile(fn);
     if (logFile.open(QFile::ReadWrite|QFile::Append|QFile::Text)) {
         QTextStream outStream(&logFile);
         outStream << QDateTime::currentDateTime().toString() << msg << "\n";

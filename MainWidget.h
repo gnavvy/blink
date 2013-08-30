@@ -7,6 +7,7 @@
 #include <QtWebKit>
 #include <QMediaPlayer>
 #include <QVideoWidget>
+#include <opencv2/imgproc/imgproc.hpp>
 #include "EyeTracker.h"
 #include "MaskView.h"
 
@@ -25,6 +26,7 @@ public slots:
     void onFatigueTimerTimeOut();
     void onTaskButtonClicked();
     void onBlinkDectected();
+    void onCvFrameReady(QImage img);
 
 protected:
     void resizeEvent(QResizeEvent *event);

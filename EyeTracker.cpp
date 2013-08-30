@@ -21,29 +21,20 @@ void EyeTracker::start() {
         return;
     }
 
-    cv::Mat frame;
-    while (frame.empty()) {
-        capture >> frame;
-        std::cout << "empty frame." << std::endl;
-    }
-
-    cv::Size frameSize = frame.size();
-
-    std::cout << frameSize.width << ", " << frameSize.height << std::endl;
-
-    cv::VideoWriter video("test.mp4", CV_FOURCC('P','I','M','1'), kFPS, frameSize, true);
-    if (!video.isOpened()) {
-        std::cout << "failed to create video writer." << std::endl;
-        return;
-    }
-
     while (tracking) {
+        cv::Mat frame;
         capture >> frame;
         if (!frame.empty()) {
             cv::cvtColor(frame, frame, CV_BGR2GRAY);
             cv::flip(frame, frame, 1);
             detectAndDisplay(frame);
-    //      video.write(frame);
+
+            if (!pausing) {
+                cv::resize(frame, frame, kVideoLogSize);
+                cv::cvtColor(frame, frame, CV_GRAY2RGB);
+                emit frameReady(QImage(frame.data, frame.size().width, frame.size().height,
+                                       frame.step, QImage::Format_RGB888));
+            }
         }
         msleep(1000/kFPS);
     }
