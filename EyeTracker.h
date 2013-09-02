@@ -35,7 +35,6 @@ private:
     const int kMinFace = 300;
     const int kMinEyes = 100;
     const int kFPS = 30;
-    const cv::Size kVideoLogSize = cv::Size(320, 240);
     const std::string kWindowTitle = "Capture - Face detection";
     const std::string kFaceCascadePath = "./res/haarcascade_frontalface_alt.xml";
     const std::string kEyesCascadePath = "./res/haarcascade_eye_tree_eyeglasses.xml";

@@ -11,14 +11,11 @@
 class MaskView : public QGLWidget {
     Q_OBJECT
 public:
-    explicit MaskView(QWidget *cw);
+    explicit MaskView(QWidget *parent = 0);
     virtual ~MaskView();
 
-    // control
-//    void setContentWidget(QWidget *cw) {
-//        this->contentView = cw;
-//    }
-    void updateLayout();
+    void setContext(QWidget *cw) { this->context = cw; }
+    void updateFboSize();
     void reset();
     void flash();
     void blur();
@@ -47,9 +44,9 @@ private:
     QTimer     *renderTimer = nullptr;
     QTimer     *flashTimer  = nullptr;
     QTimer     *blurTimer   = nullptr;
-    QWidget    *contentView = nullptr;
-    int         contentWidth;
-    int         contentHeight;
+    QWidget    *context     = nullptr;
+    int         fboWidth;
+    int         fboHeight;
 
     // opengl
     QGLFramebufferObject *fboScene   = nullptr;

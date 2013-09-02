@@ -10,6 +10,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include "EyeTracker.h"
 #include "MaskView.h"
+#include "MemTest.h"
 
 class MainWidget : public QWidget {
     Q_OBJECT
@@ -39,10 +40,12 @@ private:
     const QString TEXT_DISABLE_STIMULUS = "Disable Stimulus";
     const QString SCHEME_HTTP = "http";
     const QString SCHEME_FILE = "file";
+    const QString SCHEME_TASK = "task";
 
     QGridLayout *baseLayout = nullptr;
     MaskView *maskView = nullptr;
     QWebView *webView = nullptr;
+    MemTest *memView = nullptr;
 
     EyeTracker *eyeTracker = nullptr;
     QThread *eyeTrackerThread = nullptr;

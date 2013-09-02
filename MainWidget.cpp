@@ -33,11 +33,15 @@ void MainWidget::setupViews() {
     baseLayout = new QGridLayout();  // 9*9 grid
 
     webView = new QWebView(this);
-    maskView = new MaskView(webView);
+    memView = new MemTest(this);
+
+    maskView = new MaskView();
+    maskView->setContext(webView);  // temp
     maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-    baseLayout->addWidget(maskView, 1, 0, 9, 9);
+    baseLayout->addWidget(memView, 1, 0, 9, 9);
     baseLayout->addWidget(webView, 1, 0, 9, 9);
+    baseLayout->addWidget(maskView, 1, 0, 9, 9);
 
     for (int i = 0; i < NUM_TASKS; i++) {
         QPushButton *button = new QPushButton("Task"+QString::number(i+1));
@@ -59,8 +63,7 @@ void MainWidget::setupViews() {
     baseLayout->addWidget(buttonFinish, 0, 8, 1, 1);
 
     this->setLayout(baseLayout);
-    // update maskView sizes for fbo
-    maskView->updateLayout();
+    maskView->updateFboSize();
 }
 
 void MainWidget::setupTimers() {
@@ -73,7 +76,7 @@ void MainWidget::setupTasks() {
     taskUrls.push_back(QUrl("http://mrnussbaum.com/readingcomp/doughnuts/"));
     taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
     taskUrls.push_back(QUrl("http://www.spotthedifference.com/photogame.asp"));
-    taskUrls.push_back(QUrl("http://faculty.washington.edu/chudler/puzmatch.html"));
+    taskUrls.push_back(QUrl("task://memory.test"));
     taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/Ted.mp4"));
     taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/Trailer.mp4"));
     std::srand(QTime::currentTime().msec());
@@ -96,10 +99,6 @@ void MainWidget::onStartButtonClicked() {
 }
 
 void MainWidget::onPauseButtonClicked() {
-    if (buttonCurrentTask)
-        buttonCurrentTask->setDisabled(true);
-    else return;
-
     eyeTracker->pause();
 
     QDateTime now = QDateTime::currentDateTime();
@@ -138,12 +137,21 @@ void MainWidget::onFatigueTimerTimeOut() {
 
 void MainWidget::onTaskButtonClicked() {
     buttonCurrentTask = (QPushButton*)sender();
+    buttonCurrentTask->setDisabled(true);
     int taskId = buttonCurrentTask->text().right(1).toInt()-1;
     QUrl taskUrl = taskUrls[taskId];
-    if (taskUrl.scheme() == SCHEME_HTTP)
+    if (taskUrl.scheme() == SCHEME_HTTP) {
+        memView->hide();
+        maskView->setContext(webView);
+        maskView->updateFboSize();
         webView->load(taskUrl);
-    else if (taskUrl.scheme() == SCHEME_FILE)
+    } else if (taskUrl.scheme() == SCHEME_TASK) {
+        memView->show();
+        maskView->setContext(memView);
+        maskView->updateFboSize();
+    } else if (taskUrl.scheme() == SCHEME_FILE) {
         QDesktopServices::openUrl(taskUrl);
+    }
 
     eyeTracker->resume();
     timestamp = QDateTime::currentDateTime();
@@ -170,11 +178,11 @@ void MainWidget::onCvFrameReady(QImage img) {
     fp.append("/").append(timestamp.toLocalTime().toString()).append("/");          // subtask path
     fp.append(QString::number(timestamp.msecsTo(QDateTime::currentDateTime())));    // file name
     fp.append(".png");
-    img.save(fp, "PNG");
+    img.scaled(320, 240, Qt::KeepAspectRatio).save(fp, "PNG");
 }
 
 void MainWidget::resizeEvent(QResizeEvent *event) {
-    maskView->updateLayout();
+    maskView->updateFboSize();
 }
 
 // -------- utils -------- //

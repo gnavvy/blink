@@ -1,7 +1,6 @@
 #include "MaskView.h"
 
-MaskView::MaskView(QWidget *cw) {
-    contentView = cw;
+MaskView::MaskView(QWidget *parent) : QGLWidget(parent) {
     setupTimers();
 }
 
@@ -80,20 +79,21 @@ void MaskView::paintGL() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    if (!contentView) return;
+    if (!context)
+        return;
 
-    GLuint tex = bindTexture(contentView->grab());
+    GLuint tex = bindTexture(context->grab());
 
     if (!blurring) {    // render glview using content from the contentWidget
-        glViewport(0, 0, contentWidth, contentHeight);
+        glViewport(0, 0, fboWidth, fboHeight);
         renderFromTexture(tex);
     } else {            // off screen blurring first, then on screen
         if (!fboScene) {
-            fboScene = new QGLFramebufferObject(contentWidth, contentHeight);
+            fboScene = new QGLFramebufferObject(fboWidth, fboHeight);
         }
 
         if (!fboBlur) {
-            fboBlur  = new QGLFramebufferObject(contentWidth, contentHeight);
+            fboBlur  = new QGLFramebufferObject(fboWidth, fboHeight);
         }
 
         // render to fbo
@@ -121,7 +121,7 @@ void MaskView::paintGL() {
         blurShader->release();
 
         // render to screen
-        glViewport(0, 0, contentWidth, contentHeight);
+        glViewport(0, 0, fboWidth, fboHeight);
         renderFromTexture(fboScene->texture());
     }
 
@@ -141,12 +141,12 @@ void MaskView::resizeGL(int w, int h) {
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 
-    updateLayout();
+    updateFboSize();
 
     delete fboScene;
     delete fboBlur;
-    fboScene = new QGLFramebufferObject(contentWidth, contentHeight);
-    fboBlur  = new QGLFramebufferObject(contentWidth, contentHeight);
+    fboScene = new QGLFramebufferObject(fboWidth, fboHeight);
+    fboBlur  = new QGLFramebufferObject(fboWidth, fboHeight);
 
     update();
 }
@@ -172,10 +172,10 @@ void MaskView::renderFromTexture(GLuint tex) {
 }
 
 // -------- ctrls -------- //
-void MaskView::updateLayout() {
+void MaskView::updateFboSize() {
     qDebug() << "updateLayout";
-    contentWidth = contentView ? contentView->size().width() : 0;
-    contentHeight = contentView ? contentView->size().height() : 0;
+    fboWidth = context ? context->size().width() : 0;
+    fboHeight = context ? context->size().height() : 0;
 }
 
 void MaskView::flash() {

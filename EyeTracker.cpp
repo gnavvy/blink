@@ -14,7 +14,7 @@ EyeTracker::~EyeTracker() {
 }
 
 void EyeTracker::start() {
-    cv::VideoCapture capture(0);
+    cv::VideoCapture capture(-1);
 
     if (!capture.isOpened()) {
         std::cout << "failed to capture frames from webcam." << std::endl;
@@ -30,7 +30,6 @@ void EyeTracker::start() {
             detectAndDisplay(frame);
 
             if (!pausing) {
-                cv::resize(frame, frame, kVideoLogSize);
                 cv::cvtColor(frame, frame, CV_GRAY2RGB);
                 emit frameReady(QImage(frame.data, frame.size().width, frame.size().height,
                                        frame.step, QImage::Format_RGB888));
