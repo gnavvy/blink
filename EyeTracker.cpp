@@ -6,7 +6,6 @@ EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {
         exit(EXIT_FAILURE);
     }
     tracking = true;
-    pausing = true;
 }
 
 EyeTracker::~EyeTracker() {
@@ -29,11 +28,8 @@ void EyeTracker::start() {
             cv::flip(frame, frame, 1);
             detectAndDisplay(frame);
 
-            if (!pausing) {
-                cv::cvtColor(frame, frame, CV_GRAY2RGB);
-                emit frameReady(QImage(frame.data, frame.size().width, frame.size().height,
-                                       frame.step, QImage::Format_RGB888));
-            }
+            cv::cvtColor(frame, frame, CV_GRAY2RGB);
+            emit frameReady(QImage(frame.data, frame.size().width, frame.size().height, frame.step, QImage::Format_RGB888));
         }
         msleep(1000/kFPS);
     }

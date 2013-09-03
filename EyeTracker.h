@@ -18,9 +18,6 @@ public:
     explicit EyeTracker(QObject *parent = 0);
     virtual ~EyeTracker();
     void stopTracking() { tracking = false; }
-    void pause() { pausing = true; }
-    void resume() { pausing = false; }
-    bool isPaused() const { return pausing; }
 
 public slots:
     void start();
@@ -33,7 +30,7 @@ signals:
 
 private:
     const int kMinFace = 300;
-    const int kMinEyes = 100;
+    const int kMinEyes = 50;
     const int kFPS = 30;
     const std::string kWindowTitle = "Capture - Face detection";
     const std::string kFaceCascadePath = "./res/haarcascade_frontalface_alt.xml";

@@ -42,10 +42,11 @@ private:
     const QString SCHEME_FILE = "file";
     const QString SCHEME_TASK = "task";
 
-    QGridLayout *baseLayout = nullptr;
+    QGridLayout *gridLayout = nullptr;
     MaskView *maskView = nullptr;
     QWebView *webView = nullptr;
     MemTest *memView = nullptr;
+    QLabel *cameraView = nullptr;
 
     EyeTracker *eyeTracker = nullptr;
     QThread *eyeTrackerThread = nullptr;
@@ -57,7 +58,7 @@ private:
     bool toFlash = false;
     bool toBlur  = true;
     bool stimulusEnabled = false;
-    bool paused = false;
+    bool cameraViewEnabled = false;
 
     std::vector<QPushButton*> taskButtons;
     std::vector<QUrl> taskUrls;

@@ -30,23 +30,27 @@ void MainWidget::setupEyeTracker() {
 }
 
 void MainWidget::setupViews() {
-    baseLayout = new QGridLayout();  // 9*9 grid
+    gridLayout = new QGridLayout(this);  // 9*9 grid
+
+    cameraView = new QLabel(this);
+    cameraView->setAlignment(Qt::AlignCenter);
 
     webView = new QWebView(this);
     memView = new MemTest(this);
 
-    maskView = new MaskView();
-    maskView->setContext(webView);  // temp
+    maskView = new MaskView(this);
+    maskView->setContext(cameraView);  // temp
     maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-    baseLayout->addWidget(memView, 1, 0, 9, 9);
-    baseLayout->addWidget(webView, 1, 0, 9, 9);
-    baseLayout->addWidget(maskView, 1, 0, 9, 9);
+    gridLayout->addWidget(cameraView, 1, 0, 9, 9);
+    gridLayout->addWidget(memView, 1, 0, 9, 9);
+    gridLayout->addWidget(webView, 1, 0, 9, 9);
+    gridLayout->addWidget(maskView, 1, 0, 9, 9);
 
     for (int i = 0; i < NUM_TASKS; i++) {
         QPushButton *button = new QPushButton("Task"+QString::number(i+1));
         connect(button, SIGNAL(clicked()), this, SLOT(onTaskButtonClicked()));
-        baseLayout->addWidget(button, 0, i+1, 1, 1);
+        gridLayout->addWidget(button, 0, i+1, 1, 1);
         taskButtons.push_back(button);
     }
 
@@ -58,11 +62,11 @@ void MainWidget::setupViews() {
     connect(buttonPause, SIGNAL(clicked()), this, SLOT(onPauseButtonClicked()));
     connect(buttonFinish, SIGNAL(clicked()), this, SLOT(onFinishButtonClicked()));
 
-    baseLayout->addWidget(buttonStart, 0, 0, 1, 1);
-    baseLayout->addWidget(buttonPause, 0, 7, 1, 1);
-    baseLayout->addWidget(buttonFinish, 0, 8, 1, 1);
+    gridLayout->addWidget(buttonStart, 0, 0, 1, 1);
+    gridLayout->addWidget(buttonPause, 0, 7, 1, 1);
+    gridLayout->addWidget(buttonFinish, 0, 8, 1, 1);
 
-    this->setLayout(baseLayout);
+    this->setLayout(gridLayout);
     maskView->updateFboSize();
 }
 
@@ -84,7 +88,11 @@ void MainWidget::setupTasks() {
 }
 
 // -------- slots -------- //
-void MainWidget::onStartButtonClicked() {
+void MainWidget::onStartButtonClicked() {   
+    cameraViewEnabled = true;
+    maskView->setContext(cameraView);
+    maskView->updateFboSize();
+
     buttonStart->setDisabled(true);
     blinkCounter = 0;
     timestart = QDateTime::currentDateTime();
@@ -98,44 +106,9 @@ void MainWidget::onStartButtonClicked() {
     outputLog(" |----------------------| ");
 }
 
-void MainWidget::onPauseButtonClicked() {
-    eyeTracker->pause();
-
-    QDateTime now = QDateTime::currentDateTime();
-    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
-    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
-    outputLog(" |----------------------| ");
-
-    blinkCounter = 0;
-    timestamp = now;
-}
-
-void MainWidget::onFinishButtonClicked() {
-    eyeTracker->stopTracking();
-    fatigueTimer->stop();
-
-    QDateTime now = QDateTime::currentDateTime();
-    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
-    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
-    outputLog(" |----------------------| ");
-}
-
-void MainWidget::onFatigueTimerTimeOut() {
-    if (toFlash) {
-        maskView->flash();
-        fatigueTimer->start();
-    }
-
-    if (toBlur) {
-        maskView->blur();
-        fatigueTimer->stop();
-    }
-
-    maskView->update();
-    outputLog(" stimulated ");
-}
-
 void MainWidget::onTaskButtonClicked() {
+    cameraViewEnabled = false;
+
     buttonCurrentTask = (QPushButton*)sender();
     buttonCurrentTask->setDisabled(true);
     int taskId = buttonCurrentTask->text().right(1).toInt()-1;
@@ -153,7 +126,6 @@ void MainWidget::onTaskButtonClicked() {
         QDesktopServices::openUrl(taskUrl);
     }
 
-    eyeTracker->resume();
     timestamp = QDateTime::currentDateTime();
     QString subTaskPath = QString("./log/").append(timestart.toLocalTime().toString());
     subTaskPath.append("/").append(timestamp.toLocalTime().toString());
@@ -163,22 +135,67 @@ void MainWidget::onTaskButtonClicked() {
     outputLog(QString(" Task: ").append(QUrl(taskUrls[taskId]).toString()));
 }
 
+void MainWidget::onPauseButtonClicked() {
+    cameraViewEnabled = true;
+    maskView->setContext(cameraView);
+    maskView->updateFboSize();
+
+    QDateTime now = QDateTime::currentDateTime();
+    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
+    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
+    outputLog(" |----------------------| ");
+
+    blinkCounter = 0;
+    timestamp = now;
+}
+
+void MainWidget::onFinishButtonClicked() {   
+    eyeTracker->stopTracking();
+    fatigueTimer->stop();
+
+    QDateTime now = QDateTime::currentDateTime();
+    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
+    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
+    outputLog(" |----------------------| ");
+
+    cameraView->clear();
+}
+
+void MainWidget::onFatigueTimerTimeOut() {
+    if (toFlash) {
+        maskView->flash();
+        fatigueTimer->start();
+    }
+
+    if (toBlur) {
+        maskView->blur();
+        fatigueTimer->stop();
+    }
+
+    maskView->update();
+    outputLog(" stimulated ");
+}
+
 void MainWidget::onBlinkDectected() {
     blinkCounter++;
     if (stimulusEnabled) {
         fatigueTimer->start();
         maskView->reset();
     }
-    if (!eyeTracker->isPaused())
+    if (!cameraViewEnabled)
         outputLog(" blink detected ");
 }
 
 void MainWidget::onCvFrameReady(QImage img) {
-    QString fp = QString("./log/").append(timestart.toLocalTime().toString());      // task path
-    fp.append("/").append(timestamp.toLocalTime().toString()).append("/");          // subtask path
-    fp.append(QString::number(timestamp.msecsTo(QDateTime::currentDateTime())));    // file name
-    fp.append(".png");
-    img.scaled(320, 240, Qt::KeepAspectRatio).save(fp, "PNG");
+    if (cameraViewEnabled) {
+        cameraView->setPixmap(QPixmap::fromImage(img));
+
+    } else {
+        QString fp = QString("./log/").append(timestart.toLocalTime().toString());      // task path
+        fp.append("/").append(timestamp.toLocalTime().toString()).append("/");          // subtask path
+        fp.append(QString::number(timestamp.msecsTo(QDateTime::currentDateTime())));    // file name
+        img.scaled(320, 240, Qt::KeepAspectRatio).save(fp.append(".png"), "PNG");
+    }
 }
 
 void MainWidget::resizeEvent(QResizeEvent *event) {
