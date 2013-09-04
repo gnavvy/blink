@@ -7,14 +7,7 @@ MainWidget::MainWidget(QWidget *parent) : QWidget(parent) {
     setupTasks();
 }
 
-MainWidget::~MainWidget() {
-    if (maskView)       delete maskView;
-    if (webView)        delete webView;
-    if (fatigueTimer)   delete fatigueTimer;
-
-    foreach (auto button, taskButtons)
-        delete button;
-}
+MainWidget::~MainWidget() { }
 
 void MainWidget::setupEyeTracker() {
     eyeTrackerThread = new QThread();
@@ -31,21 +24,24 @@ void MainWidget::setupEyeTracker() {
 
 void MainWidget::setupViews() {
     gridLayout = new QGridLayout(this);  // 9*9 grid
+    contentStack = new QStackedWidget(this);
 
     cameraView = new QLabel(this);
     cameraView->setAlignment(Qt::AlignCenter);
 
     webView = new QWebView(this);
-    memView = new MemTest(this);
+    memtestView = new MemTest(this);
+
+    contentStack->addWidget(cameraView);
+    contentStack->addWidget(webView);
+    contentStack->addWidget(memtestView);
 
     maskView = new MaskView(this);
-    maskView->setContext(cameraView);  // temp
+    maskView->setContext(contentStack);  // temp
     maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-    gridLayout->addWidget(cameraView, 1, 0, 9, 9);
-    gridLayout->addWidget(memView, 1, 0, 9, 9);
-    gridLayout->addWidget(webView, 1, 0, 9, 9);
-    gridLayout->addWidget(maskView, 1, 0, 9, 9);
+//    gridLayout->addWidget(maskView, 1, 0, 9, 9);
+    gridLayout->addWidget(contentStack, 1, 0, 9, 9);
 
     for (int i = 0; i < NUM_TASKS; i++) {
         QPushButton *button = new QPushButton("Task"+QString::number(i+1));
@@ -54,9 +50,9 @@ void MainWidget::setupViews() {
         taskButtons.push_back(button);
     }
 
-    buttonStart = new QPushButton("Start");
-    buttonPause = new QPushButton("Pause");
-    buttonFinish = new QPushButton("Finish");
+    buttonStart = new QPushButton("Camera On");
+    buttonPause = new QPushButton("Stop");
+    buttonFinish = new QPushButton("Camera Off");
 
     connect(buttonStart, SIGNAL(clicked()), this, SLOT(onStartButtonClicked()));
     connect(buttonPause, SIGNAL(clicked()), this, SLOT(onPauseButtonClicked()));
@@ -81,7 +77,7 @@ void MainWidget::setupTasks() {
     taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
     taskUrls.push_back(QUrl("http://www.spotthedifference.com/photogame.asp"));
     taskUrls.push_back(QUrl("task://memory.test"));
-    taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/Ted.mp4"));
+    taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/SonaarLuthra_2011G-480p.mp4"));
     taskUrls.push_back(QUrl("file:///Users/Yang/Develop/blink/video/Trailer.mp4"));
     std::srand(QTime::currentTime().msec());
     std::random_shuffle(taskUrls.begin(), taskUrls.end());
@@ -90,8 +86,7 @@ void MainWidget::setupTasks() {
 // -------- slots -------- //
 void MainWidget::onStartButtonClicked() {   
     cameraViewEnabled = true;
-    maskView->setContext(cameraView);
-    maskView->updateFboSize();
+    contentStack->setCurrentWidget(cameraView);
 
     buttonStart->setDisabled(true);
     blinkCounter = 0;
@@ -114,14 +109,10 @@ void MainWidget::onTaskButtonClicked() {
     int taskId = buttonCurrentTask->text().right(1).toInt()-1;
     QUrl taskUrl = taskUrls[taskId];
     if (taskUrl.scheme() == SCHEME_HTTP) {
-        memView->hide();
-        maskView->setContext(webView);
-        maskView->updateFboSize();
+        contentStack->setCurrentWidget(webView);
         webView->load(taskUrl);
     } else if (taskUrl.scheme() == SCHEME_TASK) {
-        memView->show();
-        maskView->setContext(memView);
-        maskView->updateFboSize();
+        contentStack->setCurrentWidget(memtestView);
     } else if (taskUrl.scheme() == SCHEME_FILE) {
         QDesktopServices::openUrl(taskUrl);
     }
@@ -137,8 +128,7 @@ void MainWidget::onTaskButtonClicked() {
 
 void MainWidget::onPauseButtonClicked() {
     cameraViewEnabled = true;
-    maskView->setContext(cameraView);
-    maskView->updateFboSize();
+    contentStack->setCurrentWidget(cameraView);
 
     QDateTime now = QDateTime::currentDateTime();
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
@@ -150,15 +140,9 @@ void MainWidget::onPauseButtonClicked() {
 }
 
 void MainWidget::onFinishButtonClicked() {   
-    eyeTracker->stopTracking();
-    fatigueTimer->stop();
-
-    QDateTime now = QDateTime::currentDateTime();
-    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
-    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
-    outputLog(" |----------------------| ");
-
     cameraView->clear();
+    eyeTracker->stop();
+    fatigueTimer->stop();
 }
 
 void MainWidget::onFatigueTimerTimeOut() {
@@ -189,7 +173,6 @@ void MainWidget::onBlinkDectected() {
 void MainWidget::onCvFrameReady(QImage img) {
     if (cameraViewEnabled) {
         cameraView->setPixmap(QPixmap::fromImage(img));
-
     } else {
         QString fp = QString("./log/").append(timestart.toLocalTime().toString());      // task path
         fp.append("/").append(timestamp.toLocalTime().toString()).append("/");          // subtask path

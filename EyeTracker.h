@@ -17,7 +17,7 @@ class EyeTracker : public QObject {
 public:
     explicit EyeTracker(QObject *parent = 0);
     virtual ~EyeTracker();
-    void stopTracking() { tracking = false; }
+    void stop() { isTracking = false; }
 
 public slots:
     void start();
@@ -43,8 +43,7 @@ private:
     int numEyesPrev = 0;
     int numEyesHist = 0;
 
-    bool tracking = false;
-    bool pausing = false;
+    bool isTracking = false;
 
     void msleep(int ms);
     void detectAndDisplay(cv::Mat& frame);

@@ -7,6 +7,7 @@
 #include <QtWebKit>
 #include <QMediaPlayer>
 #include <QVideoWidget>
+#include <QStackedWidget>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "EyeTracker.h"
 #include "MaskView.h"
@@ -43,10 +44,13 @@ private:
     const QString SCHEME_TASK = "task";
 
     QGridLayout *gridLayout = nullptr;
-    MaskView *maskView = nullptr;
-    QWebView *webView = nullptr;
-    MemTest *memView = nullptr;
-    QLabel *cameraView = nullptr;
+    QStackedWidget *contentStack = nullptr;
+    QStackedWidget *viewStack = nullptr;
+
+    MaskView *maskView;
+    QWebView *webView;
+    MemTest *memtestView;
+    QLabel *cameraView;
 
     EyeTracker *eyeTracker = nullptr;
     QThread *eyeTrackerThread = nullptr;

@@ -5,11 +5,11 @@ EyeTracker::EyeTracker(QObject *parent) : QObject(parent) {
         emit log("Cannot load cascade files...");
         exit(EXIT_FAILURE);
     }
-    tracking = true;
+    isTracking = true;
 }
 
 EyeTracker::~EyeTracker() {
-    stopTracking();
+//    stop();
 }
 
 void EyeTracker::start() {
@@ -20,7 +20,7 @@ void EyeTracker::start() {
         return;
     }
 
-    while (tracking) {
+    while (isTracking) {
         cv::Mat frame;
         capture >> frame;
         if (!frame.empty()) {
@@ -48,7 +48,7 @@ void EyeTracker::detectAndDisplay(cv::Mat& frame) {
     std::vector<cv::Rect> eyeRegions;
     eyesCascade.detectMultiScale(faceROI, eyeRegions, 1.2, 2, CV_HAAR_SCALE_IMAGE, cv::Size(kMinEyes, kMinEyes));
     numEyesCurr = eyeRegions.size();
-    if (numEyesCurr == 2) {
+    if (numEyesCurr >= 2) {
         numEyesHist++;
     } else if (numEyesCurr == 0 && numEyesHist > 10) {
         numEyesHist = 0;
