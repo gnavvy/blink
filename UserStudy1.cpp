@@ -2,12 +2,9 @@
 
 UserStudy1::UserStudy1(QWidget *parent) : QWidget(parent) {
     setupEyeTracker();
-    setupTimers();
     setupViews();
     setupTasks();
 }
-
-UserStudy1::~UserStudy1() { }
 
 void UserStudy1::setupEyeTracker() {
     eyeTrackerThread = new QThread();
@@ -36,11 +33,6 @@ void UserStudy1::setupViews() {
     contentStack->addWidget(webView);
     contentStack->addWidget(memtestView);
 
-    maskView = new MaskView(this);
-    maskView->setContext(contentStack);  // temp
-    maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
-
-//    gridLayout->addWidget(maskView, 1, 0, 9, 9);
     gridLayout->addWidget(contentStack, 1, 0, 9, 9);
 
     for (int i = 0; i < NUM_TASKS; i++) {
@@ -63,13 +55,6 @@ void UserStudy1::setupViews() {
     gridLayout->addWidget(buttonFinish, 0, 8, 1, 1);
 
     this->setLayout(gridLayout);
-    maskView->updateFboSize();
-}
-
-void UserStudy1::setupTimers() {
-    fatigueTimer = new QTimer(this);
-    fatigueTimer->setInterval(FATIGUE_LIMIT);
-    connect(fatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
 }
 
 void UserStudy1::setupTasks() {
@@ -140,32 +125,12 @@ void UserStudy1::onPauseButtonClicked() {
 }
 
 void UserStudy1::onFinishButtonClicked() {
-    cameraView->clear();
     eyeTracker->stop();
-    fatigueTimer->stop();
-}
-
-void UserStudy1::onFatigueTimerTimeOut() {
-    if (toFlash) {
-        maskView->flash();
-        fatigueTimer->start();
-    }
-
-    if (toBlur) {
-        maskView->blur();
-        fatigueTimer->stop();
-    }
-
-    maskView->update();
-    outputLog(" stimulated ");
+    cameraView->clear();
 }
 
 void UserStudy1::onBlinkDectected() {
     blinkCounter++;
-    if (stimulusEnabled) {
-        fatigueTimer->start();
-        maskView->reset();
-    }
     if (!cameraViewEnabled)
         outputLog(" blink detected ");
 }
@@ -179,10 +144,6 @@ void UserStudy1::onCvFrameReady(QImage img) {
         fp.append(QString::number(timestamp.msecsTo(QDateTime::currentDateTime())));    // file name
         img.scaled(320, 240, Qt::KeepAspectRatio).save(fp.append(".png"), "PNG");
     }
-}
-
-void UserStudy1::resizeEvent(QResizeEvent *event) {
-    maskView->updateFboSize();
 }
 
 // -------- utils -------- //

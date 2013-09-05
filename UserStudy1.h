@@ -1,14 +1,17 @@
-#ifndef MAINWIDGET_H
-#define MAINWIDGET_H
+#ifndef USERSTUDY1_H
+#define USERSTUDY1_H
 
 #include <random>
 #include <algorithm>
+#include <QLabel>
+#include <QTimer>
 #include <QWidget>
-#include <QtWebKit>
-#include <QMediaPlayer>
-#include <QVideoWidget>
-#include <QStackedWidget>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <QThread>
+#include <QVector>
+#include <QString>
+#include <QDateTime>
+#include <QPushButton>
+#include <QGridLayout>
 #include "EyeTracker.h"
 #include "MaskView.h"
 #include "MemTest.h"
@@ -17,7 +20,6 @@ class UserStudy1 : public QWidget {
     Q_OBJECT
 public:
     explicit UserStudy1(QWidget *parent = 0);
-    virtual ~UserStudy1();
     
 signals:
     
@@ -25,16 +27,12 @@ public slots:
     void onStartButtonClicked();
     void onPauseButtonClicked();
     void onFinishButtonClicked();
-    void onFatigueTimerTimeOut();
     void onTaskButtonClicked();
     void onBlinkDectected();
     void onCvFrameReady(QImage img);
 
-protected:
-    void resizeEvent(QResizeEvent *event);
-
 private:
-    // -- member -- //
+    // -- member variable -- //
     const int FATIGUE_LIMIT = 3000;  // 3s
     const int NUM_TASKS = 6;
     const QString TEXT_ENABLE_STIMULUS = "Enable Stimulus";
@@ -43,40 +41,35 @@ private:
     const QString SCHEME_FILE = "file";
     const QString SCHEME_TASK = "task";
 
-    QGridLayout *gridLayout = nullptr;
-    QStackedWidget *contentStack = nullptr;
-    QStackedWidget *viewStack = nullptr;
+    QGridLayout *gridLayout;
+    QStackedWidget *contentStack;
+    QStackedWidget *viewStack;
 
     MaskView *maskView;
     QWebView *webView;
     MemTest *memtestView;
     QLabel *cameraView;
 
-    EyeTracker *eyeTracker = nullptr;
-    QThread *eyeTrackerThread = nullptr;
-    QTimer *fatigueTimer = nullptr;
+    EyeTracker *eyeTracker;
+    QThread *eyeTrackerThread;
     QDateTime timestamp;
     QDateTime timestart;
 
     int blinkCounter = 0;
-    bool toFlash = false;
-    bool toBlur  = true;
-    bool stimulusEnabled = false;
     bool cameraViewEnabled = false;
 
-    std::vector<QPushButton*> taskButtons;
-    std::vector<QUrl> taskUrls;
-    QPushButton *buttonStart = nullptr;
-    QPushButton *buttonPause = nullptr;
-    QPushButton *buttonFinish = nullptr;
-    QPushButton *buttonCurrentTask = nullptr;
+    QVector<QPushButton*> taskButtons;
+    QVector<QUrl> taskUrls;
+    QPushButton *buttonStart;
+    QPushButton *buttonPause;
+    QPushButton *buttonFinish;
+    QPushButton *buttonCurrentTask;
 
-    // -- functions -- //
+    // -- member function -- //
     void setupEyeTracker();
-    void setupTimers();
     void setupViews();
     void setupTasks();
     void outputLog(const QString &msg);
 };
 
-#endif // MAINWIDGET_H
+#endif // USERSTUDY2_H
