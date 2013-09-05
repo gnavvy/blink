@@ -23,14 +23,16 @@ HEADERS += \
     EyeTracker.h \
     MaskView.h \
     MemTest.h \
-    UserStudy1.h
+    UserStudy1.h \
+    UserStudy2.h
 
 SOURCES += \
     main.cpp \
     EyeTracker.cpp \
     MaskView.cpp \
     MemTest.cpp \
-    UserStudy1.cpp
+    UserStudy1.cpp \
+    UserStudy2.cpp
 
 OTHER_FILES += \
     blur.frag \
