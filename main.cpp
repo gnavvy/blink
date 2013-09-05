@@ -1,17 +1,14 @@
-#include "MainWidget.h"
+#include "UserStudy1.h"
 #include <QApplication>
-
-#include <QVideoWidget>
-#include <QMediaPlayer>
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
 
     QRect res = QApplication::desktop()->screenGeometry(1);
-    MainWidget w;
-    w.move(res.x(), res.y());
-    w.resize(res.width(), res.height());
-    w.show();
+    UserStudy1 us1;
+    us1.move(res.x(), res.y());
+    us1.resize(res.width(), res.height());
+    us1.show();
 
     return app.exec();
 }

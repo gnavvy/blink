@@ -1,15 +1,15 @@
-#include "MainWidget.h"
+#include "UserStudy1.h"
 
-MainWidget::MainWidget(QWidget *parent) : QWidget(parent) {
+UserStudy1::UserStudy1(QWidget *parent) : QWidget(parent) {
     setupEyeTracker();
     setupTimers();
     setupViews();
     setupTasks();
 }
 
-MainWidget::~MainWidget() { }
+UserStudy1::~UserStudy1() { }
 
-void MainWidget::setupEyeTracker() {
+void UserStudy1::setupEyeTracker() {
     eyeTrackerThread = new QThread();
     eyeTracker       = new EyeTracker();
     eyeTracker->moveToThread(eyeTrackerThread);
@@ -22,7 +22,7 @@ void MainWidget::setupEyeTracker() {
     connect(eyeTrackerThread, SIGNAL(finished()), eyeTrackerThread, SLOT(deleteLater()));
 }
 
-void MainWidget::setupViews() {
+void UserStudy1::setupViews() {
     gridLayout = new QGridLayout(this);  // 9*9 grid
     contentStack = new QStackedWidget(this);
 
@@ -66,13 +66,13 @@ void MainWidget::setupViews() {
     maskView->updateFboSize();
 }
 
-void MainWidget::setupTimers() {
+void UserStudy1::setupTimers() {
     fatigueTimer = new QTimer(this);
     fatigueTimer->setInterval(FATIGUE_LIMIT);
     connect(fatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
 }
 
-void MainWidget::setupTasks() {
+void UserStudy1::setupTasks() {
     taskUrls.push_back(QUrl("http://mrnussbaum.com/readingcomp/doughnuts/"));
     taskUrls.push_back(QUrl("http://en.wikipedia.org/wiki/Principal_component_analysis"));
     taskUrls.push_back(QUrl("http://www.spotthedifference.com/photogame.asp"));
@@ -84,7 +84,7 @@ void MainWidget::setupTasks() {
 }
 
 // -------- slots -------- //
-void MainWidget::onStartButtonClicked() {   
+void UserStudy1::onStartButtonClicked() {
     cameraViewEnabled = true;
     contentStack->setCurrentWidget(cameraView);
 
@@ -101,7 +101,7 @@ void MainWidget::onStartButtonClicked() {
     outputLog(" |----------------------| ");
 }
 
-void MainWidget::onTaskButtonClicked() {
+void UserStudy1::onTaskButtonClicked() {
     cameraViewEnabled = false;
 
     buttonCurrentTask = (QPushButton*)sender();
@@ -126,7 +126,7 @@ void MainWidget::onTaskButtonClicked() {
     outputLog(QString(" Task: ").append(QUrl(taskUrls[taskId]).toString()));
 }
 
-void MainWidget::onPauseButtonClicked() {
+void UserStudy1::onPauseButtonClicked() {
     cameraViewEnabled = true;
     contentStack->setCurrentWidget(cameraView);
 
@@ -139,13 +139,13 @@ void MainWidget::onPauseButtonClicked() {
     timestamp = now;
 }
 
-void MainWidget::onFinishButtonClicked() {   
+void UserStudy1::onFinishButtonClicked() {
     cameraView->clear();
     eyeTracker->stop();
     fatigueTimer->stop();
 }
 
-void MainWidget::onFatigueTimerTimeOut() {
+void UserStudy1::onFatigueTimerTimeOut() {
     if (toFlash) {
         maskView->flash();
         fatigueTimer->start();
@@ -160,7 +160,7 @@ void MainWidget::onFatigueTimerTimeOut() {
     outputLog(" stimulated ");
 }
 
-void MainWidget::onBlinkDectected() {
+void UserStudy1::onBlinkDectected() {
     blinkCounter++;
     if (stimulusEnabled) {
         fatigueTimer->start();
@@ -170,7 +170,7 @@ void MainWidget::onBlinkDectected() {
         outputLog(" blink detected ");
 }
 
-void MainWidget::onCvFrameReady(QImage img) {
+void UserStudy1::onCvFrameReady(QImage img) {
     if (cameraViewEnabled) {
         cameraView->setPixmap(QPixmap::fromImage(img));
     } else {
@@ -181,12 +181,12 @@ void MainWidget::onCvFrameReady(QImage img) {
     }
 }
 
-void MainWidget::resizeEvent(QResizeEvent *event) {
+void UserStudy1::resizeEvent(QResizeEvent *event) {
     maskView->updateFboSize();
 }
 
 // -------- utils -------- //
-void MainWidget::outputLog(const QString &msg) {
+void UserStudy1::outputLog(const QString &msg) {
     QString fn = QString("./log/").append(timestart.toLocalTime().toString());
     fn.append("/").append(timestart.toLocalTime().toString()).append(".txt");
     QFile logFile(fn);

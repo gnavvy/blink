@@ -21,16 +21,16 @@ CONFIG += debug
 
 HEADERS += \
     EyeTracker.h \
-    MainWidget.h \
     MaskView.h \
-    MemTest.h
+    MemTest.h \
+    UserStudy1.h
 
 SOURCES += \
     main.cpp \
     EyeTracker.cpp \
-    MainWidget.cpp \
     MaskView.cpp \
-    MemTest.cpp
+    MemTest.cpp \
+    UserStudy1.cpp
 
 OTHER_FILES += \
     blur.frag \

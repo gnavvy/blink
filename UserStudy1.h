@@ -13,11 +13,11 @@
 #include "MaskView.h"
 #include "MemTest.h"
 
-class MainWidget : public QWidget {
+class UserStudy1 : public QWidget {
     Q_OBJECT
 public:
-    explicit MainWidget(QWidget *parent = 0);
-    virtual ~MainWidget();
+    explicit UserStudy1(QWidget *parent = 0);
+    virtual ~UserStudy1();
     
 signals:
     
