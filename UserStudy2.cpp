@@ -77,6 +77,7 @@ void UserStudy2::onStartButtonClicked() {
 
     timestamp = timestart;
     eyeTrackerThread->start();
+    fatigueTimer->start();
     outputLog(" |----------------------| ");
 }
 
