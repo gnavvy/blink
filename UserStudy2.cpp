@@ -4,7 +4,7 @@ UserStudy2::UserStudy2(QWidget *parent) : QWidget(parent) {
     setupEyeTracker();
     setupTimers();
     setupViews();
-    setupTasks();
+//    setupTasks();
 }
 
 void UserStudy2::setupEyeTracker() {
@@ -28,16 +28,24 @@ void UserStudy2::setupTimers() {
 
 void UserStudy2::setupViews() {
     gridLayout = new QGridLayout(this);  // 9*9 grid
+    contentStack = new QStackedWidget(this);
 
-    cameraView = new QLabel(this);
+    cameraView = new QLabel(contentStack);
     cameraView->setAlignment(Qt::AlignCenter);
 
+    webView = new QWebView(contentStack);
+    webView->load(QUrl("http://www.hdpuzzles.com/?puzzle=302"));
+
+    contentStack->addWidget(cameraView);
+    contentStack->addWidget(webView);
+    contentStack->setCurrentWidget(cameraView);
+
     maskView = new MaskView(this);
-    maskView->setContext(cameraView);
     maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
+    maskView->setContext(contentStack);
 
     gridLayout->addWidget(maskView, 1, 0, 9, 9);
-    gridLayout->addWidget(cameraView, 1, 0, 9, 9);
+    gridLayout->addWidget(contentStack, 1, 0, 9, 9);
 
     for (int i = 0; i < NUM_TASKS; i++) {
         QPushButton *button = new QPushButton("Task"+QString::number(i+1));
@@ -62,8 +70,6 @@ void UserStudy2::setupViews() {
     maskView->updateFboSize();
 }
 
-void UserStudy2::setupTasks() {}
-
 void UserStudy2::onStartButtonClicked() {
     cameraViewEnabled = true;
 
@@ -83,10 +89,14 @@ void UserStudy2::onStartButtonClicked() {
 
 void UserStudy2::onTaskButtonClicked() {
     cameraViewEnabled = false;
+
+    contentStack->setCurrentWidget(webView);
+    webView->load(QUrl("http://www.hdpuzzles.com/?puzzle=302"));
 }
 
 void UserStudy2::onPauseButtonClicked() {
     cameraViewEnabled = true;
+    contentStack->setCurrentWidget(cameraView);
 
     QDateTime now = QDateTime::currentDateTime();
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);

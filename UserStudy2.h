@@ -10,6 +10,8 @@
 #include <QDateTime>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QWebView>
+#include <QtWebKit>
 #include "MaskView.h"
 #include "EyeTracker.h"
 
@@ -38,8 +40,11 @@ private:
     const int NUM_TASKS = 3;
 
     QGridLayout *gridLayout;
+    QStackedWidget *contentStack;
+
     MaskView *maskView;
     QLabel *cameraView;
+    QWebView *webView;
 
     EyeTracker *eyeTracker;
     QThread *eyeTrackerThread;
@@ -63,7 +68,6 @@ private:
     void setupEyeTracker();
     void setupTimers();
     void setupViews();
-    void setupTasks();
     void outputLog(const QString &msg);
 };
 
