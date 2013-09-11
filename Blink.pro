@@ -11,6 +11,7 @@ INCLUDEPATH    += /usr/local/opt/qt5/include
 LIBS           += -L/usr/local/lib
 LIBS           += -L/usr/local/opt/qt5/lib
 LIBS           += -lm -lopencv_core -lopencv_highgui -lopencv_objdetect -lopencv_imgproc
+LIBS           += -framework Carbon
 
 QT += core gui opengl widgets webkitwidgets multimedia multimediawidgets
 
@@ -24,7 +25,8 @@ HEADERS += \
     MaskView.h \
     MemTest.h \
     UserStudy1.h \
-    UserStudy2.h
+    UserStudy2.h \
+    PopupView.h
 
 SOURCES += \
     main.cpp \
@@ -32,7 +34,8 @@ SOURCES += \
     MaskView.cpp \
     MemTest.cpp \
     UserStudy1.cpp \
-    UserStudy2.cpp
+    UserStudy2.cpp \
+    PopupView.cpp
 
 OTHER_FILES += \
     blur.frag \

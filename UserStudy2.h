@@ -14,6 +14,7 @@
 #include <QtWebKit>
 #include "MaskView.h"
 #include "EyeTracker.h"
+#include "PopupView.h"
 
 class UserStudy2 : public QWidget {
     Q_OBJECT
@@ -36,8 +37,8 @@ protected:
 
 private:
     // -- member variable -- //
-    const int FATIGUE_LIMIT = 3000;
-    const int NUM_TASKS = 3;
+    const int FATIGUE_LIMIT = 5000;
+    const int NUM_TASKS = 1;
 
     QGridLayout *gridLayout;
     QStackedWidget *contentStack;
@@ -49,12 +50,18 @@ private:
     EyeTracker *eyeTracker;
     QThread *eyeTrackerThread;
     QTimer *fatigueTimer;
+    PopupView *popupView;
+
     QDateTime timestamp;
     QDateTime timestart;
 
+    enum StimuliMode { None = 0, Flash = 1, Blur = 2, Edge = 3, Popup = 4 };
+    QVector<StimuliMode> stimulus;
+
     int blinkCounter = 0;
+    int stimuliMode = 0;
     bool toFlash = false;
-    bool toBlur  = true;
+    bool toBlur  = false;
     bool stimulusEnabled = true;
     bool cameraViewEnabled = false;
 
@@ -68,6 +75,7 @@ private:
     void setupEyeTracker();
     void setupTimers();
     void setupViews();
+    void setupStimulus();
     void outputLog(const QString &msg);
 };
 

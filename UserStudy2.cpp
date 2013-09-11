@@ -4,7 +4,7 @@ UserStudy2::UserStudy2(QWidget *parent) : QWidget(parent) {
     setupEyeTracker();
     setupTimers();
     setupViews();
-//    setupTasks();
+    setupStimulus();
 }
 
 void UserStudy2::setupEyeTracker() {
@@ -27,7 +27,7 @@ void UserStudy2::setupTimers() {
 }
 
 void UserStudy2::setupViews() {
-    gridLayout = new QGridLayout(this);  // 9*9 grid
+    gridLayout = new QGridLayout(this);  // 8*8 grid
     contentStack = new QStackedWidget(this);
 
     cameraView = new QLabel(contentStack);
@@ -40,12 +40,12 @@ void UserStudy2::setupViews() {
     contentStack->addWidget(webView);
     contentStack->setCurrentWidget(cameraView);
 
-    maskView = new MaskView(this);
-    maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
+    maskView = new MaskView(contentStack);
     maskView->setContext(contentStack);
+    maskView->setAttribute(Qt::WA_TransparentForMouseEvents);
 
-    gridLayout->addWidget(maskView, 1, 0, 9, 9);
-    gridLayout->addWidget(contentStack, 1, 0, 9, 9);
+    gridLayout->addWidget(contentStack, 1, 0, 8, 8);
+    gridLayout->addWidget(maskView, 1, 0, 8, 8);
 
     for (int i = 0; i < NUM_TASKS; i++) {
         QPushButton *button = new QPushButton("Task"+QString::number(i+1));
@@ -63,15 +63,30 @@ void UserStudy2::setupViews() {
     connect(buttonFinish, SIGNAL(clicked()), this, SLOT(onFinishButtonClicked()));
 
     gridLayout->addWidget(buttonStart, 0, 0, 1, 1);
-    gridLayout->addWidget(buttonPause, 0, 7, 1, 1);
-    gridLayout->addWidget(buttonFinish, 0, 8, 1, 1);
+    gridLayout->addWidget(buttonPause, 0, NUM_TASKS+1, 1, 1);
+    gridLayout->addWidget(buttonFinish, 0, NUM_TASKS+2, 1, 1);
 
     this->setLayout(gridLayout);
     maskView->updateFboSize();
+
+    popupView = new PopupView(this);
+    QRect screenSpace = QApplication::desktop()->screenGeometry(1);
+    popupView->move(screenSpace.x() + screenSpace.width() - popupView->width() - 24,
+                    screenSpace.y() + screenSpace.height() - popupView->height() - 24);
+}
+
+void UserStudy2::setupStimulus() {
+    stimulus.push_back(StimuliMode::Flash);
+    stimulus.push_back(StimuliMode::Blur);
+    stimulus.push_back(StimuliMode::Edge);
+    stimulus.push_back(StimuliMode::Popup);
+    std::srand(QTime::currentTime().msec());
+    std::random_shuffle(stimulus.begin(), stimulus.end());
 }
 
 void UserStudy2::onStartButtonClicked() {
     cameraViewEnabled = true;
+    contentStack->setCurrentWidget(cameraView);
 
     buttonStart->setDisabled(true);
     blinkCounter = 0;
@@ -89,15 +104,16 @@ void UserStudy2::onStartButtonClicked() {
 
 void UserStudy2::onTaskButtonClicked() {
     cameraViewEnabled = false;
-
     contentStack->setCurrentWidget(webView);
-    webView->load(QUrl("http://www.hdpuzzles.com/?puzzle=302"));
+    webView->resize(contentStack->size());
+    ((QPushButton*)sender())->setDisabled(true);
 }
 
 void UserStudy2::onPauseButtonClicked() {
     cameraViewEnabled = true;
     contentStack->setCurrentWidget(cameraView);
 
+    ((QPushButton*)sender())->setDisabled(true);
     QDateTime now = QDateTime::currentDateTime();
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
     outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
@@ -108,9 +124,9 @@ void UserStudy2::onPauseButtonClicked() {
 }
 
 void UserStudy2::onFinishButtonClicked() {
+    cameraView->clear();
     eyeTracker->stop();
     fatigueTimer->stop();
-    cameraView->clear();
 }
 
 void UserStudy2::onFatigueTimerTimeOut() {
@@ -124,6 +140,7 @@ void UserStudy2::onFatigueTimerTimeOut() {
         fatigueTimer->stop();
     }
 
+    popupView->flash();
     maskView->update();
     outputLog(" stimulated ");
 }
