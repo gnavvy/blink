@@ -141,6 +141,10 @@ void UserStudy2::onFatigueTimerTimeOut() {
     }
 
     popupView->flash();
+
+    maskView->highlight();
+    fatigueTimer->stop();
+
     maskView->update();
     outputLog(" stimulated ");
 }

@@ -5,15 +5,8 @@ MaskView::MaskView(QWidget *parent) : QGLWidget(parent) {
 }
 
 MaskView::~MaskView() {
-    if (blurTimer)      delete blurTimer;
-    if (flashTimer)     delete flashTimer;
-    if (renderTimer)    delete renderTimer;
-
     if (fboScene)       delete fboScene;
     if (fboBlur)        delete fboBlur;
-    if (blurShader)     delete blurShader;
-    if (vertShader)     delete vertShader;
-    if (fragShader)     delete fragShader;
 }
 
 void MaskView::setupTimers() {
@@ -24,6 +17,10 @@ void MaskView::setupTimers() {
     flashTimer->setInterval(1000/FPS);
     connect(flashTimer, SIGNAL(timeout()), this, SLOT(onFlashTimerTimeOut()));
 
+    edgeTimer = new QTimer(this);
+    edgeTimer->setInterval(1000/FPS*5);
+    connect(edgeTimer, SIGNAL(timeout()), this, SLOT(onEdgeTimerTimeOut()));
+
     renderTimer = new QTimer(this);
     renderTimer->setInterval(1000/FPS);
     connect(renderTimer, SIGNAL(timeout()), this, SLOT(onRenderTimerTimeOut()));
@@ -31,22 +28,20 @@ void MaskView::setupTimers() {
 }
 
 void MaskView::setupShader(const QString &vshader, const QString &fshader) {
-    blurShader = new QGLShaderProgram;
+    blurShader = new QGLShaderProgram(this);
 
     QFileInfo vsh(vshader);
     if (vsh.exists()) {
         vertShader = new QGLShader(QGLShader::Vertex);
-        if (vertShader->compileSourceFile(vshader)) {
+        if (vertShader->compileSourceFile(vshader))
             blurShader->addShader(vertShader);
-        }
     }
 
     QFileInfo fsh(fshader);
     if (fsh.exists()) {
         fragShader = new QGLShader(QGLShader::Fragment);
-        if (fragShader->compileSourceFile(fshader)) {
+        if (fragShader->compileSourceFile(fshader))
             blurShader->addShader(fragShader);
-        }
     }
 
     blurShader->link();
@@ -70,7 +65,7 @@ void MaskView::initializeGL() {
 }
 
 void MaskView::paintGL() {
-    if (flashing) {
+    if (flashEnabled) {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         return;
@@ -79,22 +74,29 @@ void MaskView::paintGL() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
-    if (!context)
-        return;
+    if (!context) return;
 
-    GLuint tex = bindTexture(context->grab());
+    QPixmap pixmap = context->grab();
 
-    if (!blurring) {    // render glview using content from the contentWidget
+    if (edgeHighlightEnabled) {
+        QPainter painter(&pixmap);
+        QPen pen(Qt::white);
+        pen.setWidth(2);
+        painter.setPen(pen);
+        painter.drawRect(204, 61, context->width()-408, context->height()-62);
+    }
+
+    GLuint tex = bindTexture(pixmap);
+
+    if (!blurEnabled) {    // render glview using content from the contentWidget
         glViewport(0, 0, fboWidth, fboHeight);
         renderFromTexture(tex);
     } else {            // off screen blurring first, then on screen
-        if (!fboScene) {
+        if (!fboScene)
             fboScene = new QGLFramebufferObject(fboWidth, fboHeight);
-        }
 
-        if (!fboBlur) {
+        if (!fboBlur)
             fboBlur  = new QGLFramebufferObject(fboWidth, fboHeight);
-        }
 
         // render to fbo
         glViewport(0, 0, fboScene->width(), fboScene->height());
@@ -114,9 +116,10 @@ void MaskView::paintGL() {
 
         // blur vertically
         blurShader->setUniformValue("offset", 0.0f, 1.0f/fboScene->height());
-        fboScene->bind(); {
-            renderFromTexture(fboBlur->texture());
-        } fboScene->release();
+
+        fboScene->bind();
+        renderFromTexture(fboBlur->texture());
+        fboScene->release();
 
         blurShader->release();
 
@@ -180,20 +183,28 @@ void MaskView::updateFboSize() {
 
 void MaskView::flash() {
     qDebug() << "flash";
-    flashing = true;
+    flashEnabled = true;
     flashTimer->start();
 }
 
 void MaskView::blur() {
     qDebug() << "blur";
-    blurring = true;
+    blurEnabled = true;
     blurTimer->start();
+}
+
+void MaskView::highlight() {
+    qDebug() << "highlight";
+    edgeHighlightEnabled = true;
+    edgeTimer->start();
 }
 
 void MaskView::reset() {
     qDebug() << "reset";
     blurRadius = 0.0f;
     blurTimer->stop();
+    edgeHighlightEnabled = false;
+    edgeTimer->stop();
 }
 
 void MaskView::debug() {
@@ -207,11 +218,17 @@ void MaskView::onRenderTimerTimeOut() {
 }
 
 void MaskView::onFlashTimerTimeOut() {
-    flashing = false;
+    flashEnabled = false;
     flashTimer->stop();
 }
 
 void MaskView::onBlurTimerTimeOut() {
     blurRadius += 0.01f;
     update();
+}
+
+void MaskView::onEdgeTimerTimeOut() {
+    edgeHighlightEnabled = !edgeHighlightEnabled;
+    edgeTimer->start();
+//    update();
 }

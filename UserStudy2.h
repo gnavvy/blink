@@ -61,7 +61,7 @@ private:
     int blinkCounter = 0;
     int stimuliMode = 0;
     bool toFlash = false;
-    bool toBlur  = false;
+    bool toBlur  = true;
     bool stimulusEnabled = true;
     bool cameraViewEnabled = false;
 

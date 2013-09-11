@@ -19,6 +19,7 @@ public:
     void reset();
     void flash();
     void blur();
+    void highlight();
     
 signals:
     
@@ -26,6 +27,7 @@ public slots:
     void onRenderTimerTimeOut();
     void onFlashTimerTimeOut();
     void onBlurTimerTimeOut();
+    void onEdgeTimerTimeOut();
 
 protected:
     void initializeGL();
@@ -35,15 +37,16 @@ protected:
 
 private:
     // ---- member ---- //
-    const int   FATIGUE_LIMIT = 3000;  // 5s
     const int   BLUR_SIZE = 512;
     const int   FPS = 60;
-    bool        blurring;
-    bool        flashing;
+    bool        blurEnabled;
+    bool        flashEnabled;
+    bool        edgeHighlightEnabled;
 
-    QTimer     *renderTimer = nullptr;
-    QTimer     *flashTimer  = nullptr;
-    QTimer     *blurTimer   = nullptr;
+    QTimer     *renderTimer;
+    QTimer     *flashTimer;
+    QTimer     *blurTimer;
+    QTimer     *edgeTimer;
     QWidget    *context     = nullptr;
     int         fboWidth;
     int         fboHeight;
