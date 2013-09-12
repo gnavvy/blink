@@ -3,6 +3,7 @@
 
 #include <QHash>
 #include <QLabel>
+#include <QTime>
 #include <QTimer>
 #include <QWidget>
 #include <QThread>
@@ -26,7 +27,7 @@ signals:
     
 public slots:
     void onStartButtonClicked();
-    void onPauseButtonClicked();
+    void onStopButtonClicked();
     void onFinishButtonClicked();
     void onFatigueTimerTimeOut();
     void onStimuliTimerTimeOut();
@@ -39,9 +40,6 @@ protected:
 
 private:
     // -- member variable -- //
-    const int FATIGUE_LIMIT = 5000;
-    const int NUM_TASKS = 1;
-
     QGridLayout *gridLayout;
     QStackedWidget *contentStack;
 
@@ -71,11 +69,10 @@ private:
     bool stimulusEnabled = true;
     bool cameraViewEnabled = false;
 
-    QVector<QPushButton*> taskButtons;
     QPushButton *buttonStart;
-    QPushButton *buttonPause;
+    QPushButton *buttonTask;
+    QPushButton *buttonStop;
     QPushButton *buttonFinish;
-    QPushButton *buttonCurrentTask;
 
     // -- member function -- //
     void setupEyeTracker();
@@ -83,6 +80,7 @@ private:
     void setupViews();
     void setupStimulus();
     void outputLog(const QString &msg);
+    int randomStimulateInterval(int min, int max);
 };
 
 #endif // USERSTUDY2_H
