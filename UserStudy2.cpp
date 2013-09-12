@@ -79,11 +79,11 @@ void UserStudy2::setupViews() {
 }
 
 void UserStudy2::setupStimulus() {
-    stimuliDuration[StimuliMode::None]  = 5 * 1000;
-    stimuliDuration[StimuliMode::Flash] = 20 * 1000;
-    stimuliDuration[StimuliMode::Blur]  = 20 * 1000;
-    stimuliDuration[StimuliMode::Edge]  = 20 * 1000;
-    stimuliDuration[StimuliMode::Popup] = 20 * 1000;
+    stimuliDuration[StimuliMode::None]  = 10;
+    stimuliDuration[StimuliMode::Flash] = 10;
+    stimuliDuration[StimuliMode::Blur]  = 10;
+    stimuliDuration[StimuliMode::Edge]  = 10;
+    stimuliDuration[StimuliMode::Popup] = 10;
 
     // start and end with no-stimuli, random stimulus in between
     stimuliModes.push_back(StimuliMode::Flash);
@@ -94,6 +94,12 @@ void UserStudy2::setupStimulus() {
     std::random_shuffle(stimuliModes.begin(), stimuliModes.end());
     stimuliModes.push_front(StimuliMode::None);
     stimuliModes.push_back(StimuliMode::None);
+
+    stimuliNames.push_back("None");
+    stimuliNames.push_back("Flash");
+    stimuliNames.push_back("Blur");
+    stimuliNames.push_back("Edge Highlight");
+    stimuliNames.push_back("Popup");
 
     modeIndex = 0;
     currentMode = stimuliModes[modeIndex];
@@ -107,17 +113,13 @@ void UserStudy2::onStartButtonClicked() {
     blinkCounter = 0;
     timestart = QDateTime::currentDateTime();
 
-    QString taskPath = QString("./log/").append(timestart.toLocalTime().toString());
-    if (!QDir(taskPath).exists())
-        QDir().mkdir(taskPath);
-
-    int currentModeDuration = stimuliDuration[currentMode];
-    stimuliTimer->start(currentModeDuration);
-    qDebug() << "mode: " << currentMode << ", t: " << currentModeDuration;
+    QString path = QString("./log/%1").arg(timestart.toLocalTime().toString());
+    if (!QDir(path).exists())
+        QDir().mkdir(path);
 
     timestamp = timestart;
     eyeTrackerThread->start();
-    fatigueTimer->start();
+
     outputLog(" |----------------------| ");
 }
 
@@ -128,19 +130,26 @@ void UserStudy2::onTaskButtonClicked() {
     webView->resize(contentStack->size());
     ((QPushButton*)sender())->setDisabled(true);
 
-    //    int currentModeDuration = stimuliDuration[currentMode];
-    //    stimuliTimer->start(currentModeDuration);
-    //    qDebug() << "mode: " << currentMode << ", t: " << currentModeDuration;
+    timestamp = QDateTime::currentDateTime();
+
+    QString subPath = QString("./log/%1/%2")
+                      .arg(timestart.toLocalTime().toString(), timestamp.toLocalTime().toString());
+    if (!QDir(subPath).exists())
+        QDir().mkdir(subPath);
+
+    int currentModeDuration = stimuliDuration[currentMode];
+    stimuliTimer->start(currentModeDuration*1000);
+    fatigueTimer->start();
 }
 
 void UserStudy2::onPauseButtonClicked() {
     cameraViewEnabled = true;
     contentStack->setCurrentWidget(cameraView);
-
     ((QPushButton*)sender())->setDisabled(true);
+
     QDateTime now = QDateTime::currentDateTime();
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
-    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
+    outputLog(QString(" blink rate for %1: %2").arg(stimuliNames[currentMode], QString::number(blinkRate)));
     outputLog(" |----------------------| ");
     blinkCounter = 0;
     timestamp = now;
@@ -154,6 +163,8 @@ void UserStudy2::onFinishButtonClicked() {
 
 void UserStudy2::onFatigueTimerTimeOut() {
     switch (currentMode) {
+        case StimuliMode::None:
+            return;
         case StimuliMode::Flash:
             maskView->flash(); break;
         case StimuliMode::Blur:
@@ -165,8 +176,7 @@ void UserStudy2::onFatigueTimerTimeOut() {
         default: break;
     }
 
-    maskView->update();
-    outputLog(QString(" stimulated (").append(QString::number(currentMode)).append(")"));
+    outputLog(" triggered ");
 }
 
 void UserStudy2::onStimuliTimerTimeOut() {
@@ -175,15 +185,21 @@ void UserStudy2::onStimuliTimerTimeOut() {
 
     QDateTime now = QDateTime::currentDateTime();
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
-    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
+    outputLog(QString(" blink rate for %1: %2").arg(stimuliNames[currentMode], QString::number(blinkRate)));
     outputLog(" |----------------------| ");
     blinkCounter = 0;
     timestamp = now;
 
+
+    QString subPath = QString("./log/%1/%2")
+                      .arg(timestart.toLocalTime().toString(), timestamp.toLocalTime().toString());
+    if (!QDir(subPath).exists())
+        QDir().mkdir(subPath);
+
     currentMode = stimuliModes[modeIndex];
     int currentModeDuration = stimuliDuration[currentMode];
-    stimuliTimer->start(currentModeDuration);
-    outputLog(" mode: " + QString::number(currentMode) + ", t: " + QString::number(currentModeDuration));
+    stimuliTimer->start(currentModeDuration*1000);
+    outputLog(QString(" %1 %2s").arg(stimuliNames[currentMode], QString::number(currentModeDuration)));
 
     modeIndex++;
 }
@@ -195,17 +211,17 @@ void UserStudy2::onBlinkDectected() {
         maskView->reset();
     }
     if (!cameraViewEnabled)
-        outputLog(" blink detected ");
+        outputLog(" blinked ");
 }
 
 void UserStudy2::onCvFrameReady(QImage img) {
     if (cameraViewEnabled) {
         cameraView->setPixmap(QPixmap::fromImage(img));
     } else {
-        QString fp = QString("./log/").append(timestart.toLocalTime().toString());      // task path
-        fp.append("/").append(timestamp.toLocalTime().toString()).append("/");          // subtask path
-        fp.append(QString::number(timestamp.msecsTo(QDateTime::currentDateTime())));    // file name
-        img.scaled(320, 240, Qt::KeepAspectRatio).save(fp.append(".png"), "PNG");
+        QString path = QString("./log/%1/%2/%3.png")
+                       .arg(timestart.toLocalTime().toString(), timestamp.toLocalTime().toString(),
+                            QString::number(timestamp.msecsTo(QDateTime::currentDateTime())));
+        img.scaled(320, 240, Qt::KeepAspectRatio).save(path, "PNG");
     }
 }
 
@@ -214,9 +230,9 @@ void UserStudy2::resizeEvent(QResizeEvent *) {
 }
 
 void UserStudy2::outputLog(const QString &msg) {
-    QString fn = QString("./log/").append(timestart.toLocalTime().toString());
-    fn.append("/").append(timestart.toLocalTime().toString()).append(".txt");
-    QFile logFile(fn);
+    QString path = QString("./log/%1/%2.txt")
+                   .arg(timestart.toLocalTime().toString(), timestart.toLocalTime().toString());
+    QFile logFile(path);
     if (logFile.open(QFile::ReadWrite|QFile::Append|QFile::Text)) {
         QTextStream outStream(&logFile);
         outStream << QDateTime::currentDateTime().toString() << msg << "\n";

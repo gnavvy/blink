@@ -60,6 +60,7 @@ private:
     enum StimuliMode { None = 0, Flash = 1, Blur = 2, Edge = 3, Popup = 4 };
     QHash<StimuliMode, int> stimuliDuration;
     QVector<StimuliMode> stimuliModes;
+    QVector<QString> stimuliNames;
     QTimer *stimuliTimer;
     StimuliMode currentMode;
     int modeIndex;
