@@ -22,7 +22,6 @@ void UserStudy2::setupEyeTracker() {
 
 void UserStudy2::setupTimers() {
     fatigueTimer = new QTimer(this);
-//    fatigueTimer->setInterval(FATIGUE_LIMIT);
     connect(fatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
 
     stimuliTimer = new QTimer(this);
@@ -69,7 +68,7 @@ void UserStudy2::setupViews() {
 
     popupView = new PopupView(this);
     QRect screenSpace = QApplication::desktop()->screenGeometry(1);
-    popupView->move(screenSpace.x() + screenSpace.width() - popupView->width() - 24,
+    popupView->move(screenSpace.x() + screenSpace.width()  - popupView->width()  - 30,
                     screenSpace.y() + screenSpace.height() - popupView->height() - 24);
 }
 
@@ -78,7 +77,7 @@ void UserStudy2::setupStimulus() {
     stimuliDuration[StimuliMode::Flash] = 10;
     stimuliDuration[StimuliMode::Blur]  = 10;
     stimuliDuration[StimuliMode::Edge]  = 10;
-    stimuliDuration[StimuliMode::Popup] = 10;
+    stimuliDuration[StimuliMode::Popup] = 60;
 
     // start and end with no-stimuli, random stimulus in between
     stimuliModes.push_back(StimuliMode::Flash);
@@ -157,19 +156,13 @@ void UserStudy2::onFinishButtonClicked() {
 
 void UserStudy2::onFatigueTimerTimeOut() {
     switch (currentMode) {
-        case StimuliMode::None:
-            return;
-        case StimuliMode::Flash:
-            maskView->flash(); break;
-        case StimuliMode::Blur:
-            maskView->blur(); break;
-        case StimuliMode::Edge:
-            maskView->highlight(); break;
-        case StimuliMode::Popup:
-            popupView->flash(); break;
+        case StimuliMode::None:  return;
+        case StimuliMode::Flash: maskView->flash(); break;
+        case StimuliMode::Blur:  maskView->blur(); break;
+        case StimuliMode::Edge:  maskView->highlight(); break;
+        case StimuliMode::Popup: popupView->show(); break;
         default: break;
     }
-
     outputLog(" triggered ");
 }
 
@@ -183,7 +176,6 @@ void UserStudy2::onStimuliTimerTimeOut() {
     outputLog(" |----------------------| ");
     blinkCounter = 0;
     timestamp = now;
-
 
     QString subPath = QString("./log/%1/%2").arg(timestart.toString(), timestamp.toString());
     if (!QDir(subPath).exists())
@@ -200,6 +192,7 @@ void UserStudy2::onBlinkDectected() {
     if (stimulusEnabled) {
         fatigueTimer->start(randomStimulateInterval(4000, 8000));
         maskView->reset();
+        popupView->hide();
     }
     if (!cameraViewEnabled)
         outputLog(" blinked ");
