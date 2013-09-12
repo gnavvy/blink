@@ -24,6 +24,9 @@ void UserStudy2::setupTimers() {
     fatigueTimer = new QTimer(this);
     fatigueTimer->setInterval(FATIGUE_LIMIT);
     connect(fatigueTimer, SIGNAL(timeout()), this, SLOT(onFatigueTimerTimeOut()));
+
+    stimuliTimer = new QTimer(this);
+    connect(stimuliTimer, SIGNAL(timeout()), this, SLOT(onStimuliTimerTimeOut()));
 }
 
 void UserStudy2::setupViews() {
@@ -36,8 +39,8 @@ void UserStudy2::setupViews() {
     webView = new QWebView(contentStack);
     webView->load(QUrl("http://www.hdpuzzles.com/?puzzle=302"));
 
-    contentStack->addWidget(cameraView);
     contentStack->addWidget(webView);
+    contentStack->addWidget(cameraView);
     contentStack->setCurrentWidget(cameraView);
 
     maskView = new MaskView(contentStack);
@@ -76,12 +79,24 @@ void UserStudy2::setupViews() {
 }
 
 void UserStudy2::setupStimulus() {
-    stimulus.push_back(StimuliMode::Flash);
-    stimulus.push_back(StimuliMode::Blur);
-    stimulus.push_back(StimuliMode::Edge);
-    stimulus.push_back(StimuliMode::Popup);
+    stimuliDuration[StimuliMode::None]  = 5 * 1000;
+    stimuliDuration[StimuliMode::Flash] = 20 * 1000;
+    stimuliDuration[StimuliMode::Blur]  = 20 * 1000;
+    stimuliDuration[StimuliMode::Edge]  = 20 * 1000;
+    stimuliDuration[StimuliMode::Popup] = 20 * 1000;
+
+    // start and end with no-stimuli, random stimulus in between
+    stimuliModes.push_back(StimuliMode::Flash);
+    stimuliModes.push_back(StimuliMode::Blur);
+    stimuliModes.push_back(StimuliMode::Edge);
+    stimuliModes.push_back(StimuliMode::Popup);
     std::srand(QTime::currentTime().msec());
-    std::random_shuffle(stimulus.begin(), stimulus.end());
+    std::random_shuffle(stimuliModes.begin(), stimuliModes.end());
+    stimuliModes.push_front(StimuliMode::None);
+    stimuliModes.push_back(StimuliMode::None);
+
+    modeIndex = 0;
+    currentMode = stimuliModes[modeIndex];
 }
 
 void UserStudy2::onStartButtonClicked() {
@@ -96,6 +111,10 @@ void UserStudy2::onStartButtonClicked() {
     if (!QDir(taskPath).exists())
         QDir().mkdir(taskPath);
 
+    int currentModeDuration = stimuliDuration[currentMode];
+    stimuliTimer->start(currentModeDuration);
+    qDebug() << "mode: " << currentMode << ", t: " << currentModeDuration;
+
     timestamp = timestart;
     eyeTrackerThread->start();
     fatigueTimer->start();
@@ -105,8 +124,13 @@ void UserStudy2::onStartButtonClicked() {
 void UserStudy2::onTaskButtonClicked() {
     cameraViewEnabled = false;
     contentStack->setCurrentWidget(webView);
+
     webView->resize(contentStack->size());
     ((QPushButton*)sender())->setDisabled(true);
+
+    //    int currentModeDuration = stimuliDuration[currentMode];
+    //    stimuliTimer->start(currentModeDuration);
+    //    qDebug() << "mode: " << currentMode << ", t: " << currentModeDuration;
 }
 
 void UserStudy2::onPauseButtonClicked() {
@@ -118,7 +142,6 @@ void UserStudy2::onPauseButtonClicked() {
     float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
     outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
     outputLog(" |----------------------| ");
-
     blinkCounter = 0;
     timestamp = now;
 }
@@ -130,23 +153,39 @@ void UserStudy2::onFinishButtonClicked() {
 }
 
 void UserStudy2::onFatigueTimerTimeOut() {
-    if (toFlash) {
-        maskView->flash();
-        fatigueTimer->start();
+    switch (currentMode) {
+        case StimuliMode::Flash:
+            maskView->flash(); break;
+        case StimuliMode::Blur:
+            maskView->blur(); break;
+        case StimuliMode::Edge:
+            maskView->highlight(); break;
+        case StimuliMode::Popup:
+            popupView->flash(); break;
+        default: break;
     }
-
-    if (toBlur) {
-        maskView->blur();
-        fatigueTimer->stop();
-    }
-
-    popupView->flash();
-
-    maskView->highlight();
-    fatigueTimer->stop();
 
     maskView->update();
-    outputLog(" stimulated ");
+    outputLog(QString(" stimulated (").append(QString::number(currentMode)).append(")"));
+}
+
+void UserStudy2::onStimuliTimerTimeOut() {
+    if (modeIndex >= stimuliModes.size())
+        return;
+
+    QDateTime now = QDateTime::currentDateTime();
+    float blinkRate = static_cast<float>(blinkCounter) * 60 / timestamp.secsTo(now);
+    outputLog(QString(" Eye blink rate: ").append(QString::number(blinkRate)));
+    outputLog(" |----------------------| ");
+    blinkCounter = 0;
+    timestamp = now;
+
+    currentMode = stimuliModes[modeIndex];
+    int currentModeDuration = stimuliDuration[currentMode];
+    stimuliTimer->start(currentModeDuration);
+    outputLog(" mode: " + QString::number(currentMode) + ", t: " + QString::number(currentModeDuration));
+
+    modeIndex++;
 }
 
 void UserStudy2::onBlinkDectected() {

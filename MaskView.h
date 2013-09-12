@@ -39,9 +39,9 @@ private:
     // ---- member ---- //
     const int   BLUR_SIZE = 512;
     const int   FPS = 60;
-    bool        blurEnabled;
-    bool        flashEnabled;
-    bool        edgeHighlightEnabled;
+    bool        blurEnabled = false;
+    bool        flashEnabled = false;
+    bool        edgeHighlightEnabled = false;
 
     QTimer     *renderTimer;
     QTimer     *flashTimer;

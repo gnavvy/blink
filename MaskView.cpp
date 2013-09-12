@@ -117,9 +117,9 @@ void MaskView::paintGL() {
         // blur vertically
         blurShader->setUniformValue("offset", 0.0f, 1.0f/fboScene->height());
 
-        fboScene->bind();
-        renderFromTexture(fboBlur->texture());
-        fboScene->release();
+        fboScene->bind(); {
+            renderFromTexture(fboBlur->texture());
+        } fboScene->release();
 
         blurShader->release();
 
@@ -219,7 +219,7 @@ void MaskView::onRenderTimerTimeOut() {
 
 void MaskView::onFlashTimerTimeOut() {
     flashEnabled = false;
-    flashTimer->stop();
+    flashTimer->stop();  // flash once
 }
 
 void MaskView::onBlurTimerTimeOut() {
@@ -229,6 +229,5 @@ void MaskView::onBlurTimerTimeOut() {
 
 void MaskView::onEdgeTimerTimeOut() {
     edgeHighlightEnabled = !edgeHighlightEnabled;
-    edgeTimer->start();
-//    update();
+    edgeTimer->start();  // flash continuously
 }

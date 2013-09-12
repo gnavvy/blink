@@ -1,6 +1,7 @@
 #ifndef USERSTUDY2_H
 #define USERSTUDY2_H
 
+#include <QHash>
 #include <QLabel>
 #include <QTimer>
 #include <QWidget>
@@ -28,6 +29,7 @@ public slots:
     void onPauseButtonClicked();
     void onFinishButtonClicked();
     void onFatigueTimerTimeOut();
+    void onStimuliTimerTimeOut();
     void onTaskButtonClicked();
     void onBlinkDectected();
     void onCvFrameReady(QImage img);
@@ -56,10 +58,13 @@ private:
     QDateTime timestart;
 
     enum StimuliMode { None = 0, Flash = 1, Blur = 2, Edge = 3, Popup = 4 };
-    QVector<StimuliMode> stimulus;
+    QHash<StimuliMode, int> stimuliDuration;
+    QVector<StimuliMode> stimuliModes;
+    QTimer *stimuliTimer;
+    StimuliMode currentMode;
+    int modeIndex;
 
     int blinkCounter = 0;
-    int stimuliMode = 0;
     bool toFlash = false;
     bool toBlur  = true;
     bool stimulusEnabled = true;
