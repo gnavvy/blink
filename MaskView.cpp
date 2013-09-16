@@ -81,9 +81,10 @@ void MaskView::paintGL() {
     if (edgeHighlightEnabled) {
         QPainter painter(&pixmap);
         QPen pen(Qt::white);
-        pen.setWidth(2);
+        pen.setWidth(4);
         painter.setPen(pen);
         painter.drawRect(204, 61, context->width()-408, context->height()-62);
+//        painter.drawRect(24, 24, context->width()-24, context->height()-24);
     }
 
     GLuint tex = bindTexture(pixmap);

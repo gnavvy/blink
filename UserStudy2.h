@@ -5,6 +5,7 @@
 #include <QLabel>
 #include <QTime>
 #include <QTimer>
+#include <QLabel>
 #include <QWidget>
 #include <QThread>
 #include <QVector>
@@ -27,6 +28,7 @@ signals:
     
 public slots:
     void onStartButtonClicked();
+    void onDemoButtonClicked();
     void onStopButtonClicked();
     void onFinishButtonClicked();
     void onFatigueTimerTimeOut();
@@ -40,6 +42,9 @@ protected:
 
 private:
     // -- member variable -- //
+    const int kDemoTime = 15;
+    const int kTestTime = 120;
+
     QGridLayout *gridLayout;
     QStackedWidget *contentStack;
 
@@ -56,7 +61,6 @@ private:
     QDateTime timestart;
 
     enum StimuliMode { None = 0, Flash = 1, Blur = 2, Edge = 3, Popup = 4 };
-    QHash<StimuliMode, int> stimuliDuration;
     QVector<StimuliMode> stimuliModes;
     QVector<QString> stimuliNames;
     QTimer *stimuliTimer;
@@ -70,9 +74,12 @@ private:
     bool cameraViewEnabled = false;
 
     QPushButton *buttonStart;
+    QPushButton *buttonDemo;
     QPushButton *buttonTask;
     QPushButton *buttonStop;
     QPushButton *buttonFinish;
+    QLabel *debugLabel;
+
 
     // -- member function -- //
     void setupEyeTracker();

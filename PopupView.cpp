@@ -12,4 +12,5 @@ PopupView::PopupView(QWidget *parent) : QWidget(parent) {
     QGridLayout *gridLayout = new QGridLayout(this);
     gridLayout->addWidget(label);
     setLayout(gridLayout);
+    setAttribute(Qt::WA_ShowWithoutActivating);
 }
